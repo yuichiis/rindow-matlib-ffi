@@ -8435,7 +8435,7 @@ class Test extends TestCase
     public function testupdateAddOnehotNormal()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, 2]);
+        $X = $this->array([1, 2],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8448,7 +8448,7 @@ class Test extends TestCase
     public function testupdateAddOnehotOutOfboundsLabelNumber1()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, 3]);
+        $X = $this->array([1, 3],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8462,7 +8462,7 @@ class Test extends TestCase
     public function testupdateAddOnehotOutOfboundsLabelNumber2()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8476,7 +8476,7 @@ class Test extends TestCase
     public function testupdateAddOnehotMinusM()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8491,7 +8491,7 @@ class Test extends TestCase
     public function testupdateAddOnehotMinusN()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8506,7 +8506,7 @@ class Test extends TestCase
     public function testupdateAddOnehotMinusOffsetX()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8521,7 +8521,7 @@ class Test extends TestCase
     public function testupdateAddOnehotMinusIncX()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8536,7 +8536,7 @@ class Test extends TestCase
     public function testupdateAddOnehotIllegalBufferX()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8551,7 +8551,7 @@ class Test extends TestCase
     public function testupdateAddOnehotOverflowBufferXwithSize()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8566,7 +8566,7 @@ class Test extends TestCase
     public function testupdateAddOnehotOverflowBufferXwithOffsetX()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8581,7 +8581,7 @@ class Test extends TestCase
     public function testupdateAddOnehotOverflowBufferXwithIncX()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8596,7 +8596,7 @@ class Test extends TestCase
     public function testupdateAddOnehotMinusOffsetY()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8611,7 +8611,7 @@ class Test extends TestCase
     public function testupdateAddOnehotMinusLdY()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8626,7 +8626,7 @@ class Test extends TestCase
     public function testupdateAddOnehotIllegalBufferY()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8641,7 +8641,7 @@ class Test extends TestCase
     public function testupdateAddOnehotOverflowBufferYwithSize()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8656,7 +8656,7 @@ class Test extends TestCase
     public function testupdateAddOnehotOverflowBufferYwithOffsetY()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(
@@ -8671,7 +8671,7 @@ class Test extends TestCase
     public function testupdateAddOnehotOverflowBufferYwithIncY()
     {
         $matlib = $this->getMatlib();
-        $X = $this->array([1, -1]);
+        $X = $this->array([1, -1],dtype:NDArray::int32);
         $Y = $this->array([[10,10,10],[10,10,10]]);
         $numClass = 3;
         [$m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY] = $this->translate_onehot(

@@ -957,7 +957,7 @@ class Matlib
         if($X->dtype()==NDArray::bool) {
             throw new InvalidArgumentException("Data type of BufferX must not be bool");
         }
-        if($this->is_integer_dtype($X->dtype())) {
+        if(!$this->is_integer_dtype($X->dtype())) {
             throw new InvalidArgumentException("Unsupported data type of label number.");
         }
     
