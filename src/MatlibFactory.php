@@ -9,7 +9,7 @@ use FFI\Location\Locator as FFIEnvLocator;
 class MatlibFactory
 {
     private static ?FFI $ffi = null;
-    protected array $libs = ['libmatlib.so','matlib.dll'];
+    protected array $libs = ['librindowmatlib.so','rindowmatlib.dll'];
 
     public function __construct(
         string $headerFile=null,
@@ -53,7 +53,7 @@ class MatlibFactory
     {
         $isAvailable = FFIEnvRuntime::isAvailable();
         //var_dump($isAvailable);
-        $lib = 'matlib.dll';
+        $lib = 'rindowmatlib.dll';
         //$lib = 'libOpenCL.so';
         $exists = FFIEnvLocator::exists($lib);
         //echo "exists:"; var_dump($exists);
