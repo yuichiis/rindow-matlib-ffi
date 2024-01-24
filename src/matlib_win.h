@@ -1,5 +1,5 @@
 #define FFI_SCOPE "Rindow\\Matlib\\FFI"
-//#define FFI_LIB "matlib.dll"
+//#define FFI_LIB "rindowmatlib.dll"
 
 /////////////////////////////////////////////
 typedef int8_t                      cl_char;

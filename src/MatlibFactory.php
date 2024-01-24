@@ -19,7 +19,14 @@ class MatlibFactory
         if(self::$ffi!==null) {
             return;
         }
-        $headerFile = $headerFile ?? __DIR__ . "/matlib_win.h";
+        if(PHP_OS=='WINNT') {
+            $defaultHeaderFile = 'matlib_win.h';
+        } elseif(PHP_OS=='Linux') {
+            $defaultHeaderFile = 'matlib_win.h';
+        } else {
+            $defaultHeaderFile = 'matlib_win.h';
+        }
+        $headerFile = $headerFile ?? __DIR__."/".$defaultHeaderFile;
         $libFiles = $libFiles ?? $this->libs;
         $code = file_get_contents($headerFile);
         $pathname = FFIEnvLocator::resolve(...$libFiles);
