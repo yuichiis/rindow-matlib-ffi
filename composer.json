@@ -6,9 +6,7 @@
     "license": "BSD-3-Clause",
     "require": {
         "php": "^8.0|^8.1|^8.2|^8.3",
-        "interop-phpobjects/polite-math": "~1.0.4",
-        "ffi/env": "^1.0",
-        "ffi/location": "^1.0"
+        "interop-phpobjects/polite-math": "~1.0.4"
     },
     "autoload": {
         "psr-4": {
