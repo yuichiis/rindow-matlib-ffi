@@ -1609,7 +1609,7 @@ class Test extends TestCase
         if(PHP_OS=="WINNT") {
             $this->assertEquals(Matlib::P_OPENMP,$n);
         } else {
-            $this->assertEquals(Matlib::P_OPENMP,$n);
+            $this->assertEquals(Matlib::P_SEQUENTIAL,$n);
         }
     }
 
