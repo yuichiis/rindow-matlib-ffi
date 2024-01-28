@@ -50,6 +50,14 @@ class MatlibFactory
             self::$ffi = $ffi;
             break;
         }
+        if(PHP_OS=='Linux') {
+            if(self::$ffi!==null) {
+                $mode = $ffi->getParallel();
+                if($mode==Matlib::P_OPENMP) {
+                    throw new RuntimeException('OpenMP does not work properly in the Linux version of PHP. Please switch to serial version of matlib.');
+                }
+            }
+        }
     }
 
     public function isAvailable() : bool
