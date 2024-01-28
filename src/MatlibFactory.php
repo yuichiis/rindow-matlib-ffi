@@ -11,8 +11,11 @@ use RuntimeException;
 class MatlibFactory
 {
     private static ?FFI $ffi = null;
+    private static ?string $libFile = null;
+
     protected array $libs_win = ['rindowmatlib.dll'];
     protected array $libs_linux = ['librindowmatlib.so'];
+    protected ?string $error = null;
 
     public function __construct(
         string $headerFile=null,
@@ -45,9 +48,12 @@ class MatlibFactory
             try {
                 $ffi = FFI::cdef($code,$filename);
             } catch(FFIException $e) {
+                $this->error = "$filename not found";
                 continue;
             }
+            $this->error = null;
             self::$ffi = $ffi;
+            self::$libFile = $filename;
             break;
         }
         if(PHP_OS=='Linux') {
@@ -84,7 +90,13 @@ class MatlibFactory
         return $this->Matlib();
     }
 
-    public function config() : void
+    public function config() : array
     {
+        return [
+            'OS' => PHP_OS,
+            'FFI' => class_exists(FFI::class),
+            'libFile' => self::$libFile,
+            'error' => $this->error,
+        ];
     }
 }

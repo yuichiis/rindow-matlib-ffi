@@ -21,7 +21,6 @@ class Test extends TestCase
     public function testConfig()
     {
         $factory = new MatlibFactory();
-        $factory->config();
-        $this->assertTrue(true);
+        $this->assertTrue($factory->isAvailable());
     }
 }
