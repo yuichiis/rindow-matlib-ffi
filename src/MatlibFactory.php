@@ -52,7 +52,7 @@ class MatlibFactory
         }
         if(PHP_OS=='Linux') {
             if(self::$ffi!==null) {
-                $mode = $ffi->getParallel();
+                $mode = self::$ffi->rindow_matlib_common_get_parallel();
                 if($mode==Matlib::P_OPENMP) {
                     throw new RuntimeException('OpenMP does not work properly in the Linux version of PHP. Please switch to serial version of matlib.');
                 }
