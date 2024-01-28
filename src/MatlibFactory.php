@@ -12,7 +12,7 @@ class MatlibFactory
 {
     private static ?FFI $ffi = null;
     protected array $libs_win = ['rindowmatlib.dll'];
-    protected array $libs_linux = ['librindowmatlibseq.so'];
+    protected array $libs_linux = ['librindowmatlib.so'];
 
     public function __construct(
         string $headerFile=null,
