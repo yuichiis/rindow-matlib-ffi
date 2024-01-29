@@ -16,7 +16,7 @@ use ArrayObject;
 use ArrayAccess;
 use SplFixedArray;
 
-class Test extends TestCase
+class MatlibTest extends TestCase
 {
     public function getMatlib()
     {

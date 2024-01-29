@@ -16,7 +16,7 @@ use ArrayObject;
 use ArrayAccess;
 use SplFixedArray;
 
-class Test extends TestCase
+class MatlibFactoryTest extends TestCase
 {
     public function testConfig()
     {
