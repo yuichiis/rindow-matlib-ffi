@@ -52,7 +52,7 @@ Please install using the apt command.
 And then set it to serial mode for use with PHP.
 
 ```shell
-$ sudo apt install ./rindow-matlib-XXXX-XXXX.deb
+$ sudo apt install ./rindow-matlib_X.X.X-X+ubuntuXX.XX_amd64.deb
 $ sudo update-alternatives --config librindowmatlib.so
 There are 2 choices for the alternative librindowmatlib.so (providing /usr/lib/librindowmatlib.so).
 
