@@ -5,8 +5,11 @@
     "keywords": ["rindow","math","matrix","FFI"],
     "license": "BSD-3-Clause",
     "require": {
-        "php": "^8.0|^8.1|^8.2|^8.3",
+        "php": "^8.1|^8.2|^8.3",
         "interop-phpobjects/polite-math": "~1.0.4"
+    },
+    "require-dev": {
+        "rindow/rindow-math-buffer-ffi": ">=1.0.0"
     },
     "autoload": {
         "psr-4": {

@@ -9,9 +9,14 @@ Status:
 
 "The interface of rindow matlib on ffi".
 
-Please see the documents about Buffer objects on [Rindow Mathematics](https://rindow.github.io/mathematics/) web pages.
+Please see the documents about rindow mathematics on [Rindow Mathematics](https://rindow.github.io/mathematics/openblas/mathlibrary.html) web pages.
+
+You can call a high-speed calculation library written in C language to speed up matrix calculation processing.
+Rindow Matlib includes many matrix operations functions used in machine learning.
 
 Requirements
 ============
 
 - PHP 8.1 or PHP8.2 or PHP8.3
+- Rindow Matlib C Library
+
