@@ -168,9 +168,9 @@ void rindow_matlib_s_nan2num(int32_t n, float *x, int32_t incX, float alpha);
 void rindow_matlib_d_nan2num(int32_t n, double *x, int32_t incX, double alpha);
 void rindow_matlib_s_isnan(int32_t n, float *x, int32_t incX);
 void rindow_matlib_d_isnan(int32_t n, double *x, int32_t incX);
-void rindow_matlib_s_searchsorted(int32_t m, float *a, int32_t incA, int32_t n, float *x, int32_t incX,
+void rindow_matlib_s_searchsorted(int32_t m, int32_t n, float *a, int32_t ldA, float *x, int32_t incX,
     int32_t right, int32_t dtype, void *y, int32_t incY);
-void rindow_matlib_d_searchsorted(int32_t m, double *a, int32_t incA, int32_t n, double *x, int32_t incX,
+void rindow_matlib_d_searchsorted(int32_t m, int32_t n, double *a, int32_t ldA, double *x, int32_t incX,
     int32_t right, int32_t dtype, void *y, int32_t incY);
 void rindow_matlib_s_cumsum(int32_t n,float *x, int32_t incX,int32_t exclusive,int32_t reverse,float *y, int32_t incY);
 void rindow_matlib_d_cumsum(int32_t n,double *x, int32_t incX,int32_t exclusive,int32_t reverse,double *y, int32_t incY);

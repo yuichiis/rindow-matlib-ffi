@@ -1379,8 +1379,8 @@ class Matlib
 
     public function searchsorted(
         int $m,
-        Buffer $A, int $offsetA, int $incA, // float
         int $n,
+        Buffer $A, int $offsetA, int $ldA, // float
         Buffer $X, int $offsetX, int $incX, // float
         bool $right,
         Buffer $Y, int $offsetY, int $incY // int
@@ -1389,13 +1389,21 @@ class Matlib
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         // Check Buffer A
-        $this->assert_vector_buffer_spec("A", $A,$m,$offsetA,$incA);
-    
+        if($offsetA<0) {
+            throw new InvalidArgumentException("Argument offsetA must be greater than or equals 0.");
+        }
+        if($ldA<0) {
+            throw new InvalidArgumentException("Argument ldA must be greater than or equals 0.");
+        }
+        if($offsetA+($m-1)*$ldA+($n-1) >= count($A)) {
+            throw new InvalidArgumentException("Matrix specification too large for bufferA.");
+        }
+
         // Check Buffer X
-        $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
+        $this->assert_vector_buffer_spec("X", $X,$m,$offsetX,$incX);
     
         // Check Buffer Y
-        $this->assert_vector_buffer_spec("Y", $Y,$n,$offsetY,$incY);
+        $this->assert_vector_buffer_spec("Y", $Y,$m,$offsetY,$incY);
     
         // Check Buffer A and X
         if($A->dtype()!=$X->dtype()) {
@@ -1407,14 +1415,14 @@ class Matlib
                 $pDataA = $A->addr($offsetA);
                 $pDataX = $X->addr($offsetX);
                 $pDataY = $Y->addr($offsetY);
-                $this->ffi->rindow_matlib_s_searchsorted($m,$pDataA,$incA,$n,$pDataX,$incX,$right,$Y->dtype(),$pDataY,$incY);
+                $this->ffi->rindow_matlib_s_searchsorted($m,$n,$pDataA,$ldA,$pDataX,$incX,$right,$Y->dtype(),$pDataY,$incY);
                 break;
             }
             case NDArray::float64: {
                 $pDataA = $A->addr($offsetA);
                 $pDataX = $X->addr($offsetX);
                 $pDataY = $Y->addr($offsetY);
-                $this->ffi->rindow_matlib_d_searchsorted($m,$pDataA,$incA,$n,$pDataX,$incX,$right,$Y->dtype(),$pDataY,$incY);
+                $this->ffi->rindow_matlib_d_searchsorted($m,$n,$pDataA,$ldA,$pDataX,$incX,$right,$Y->dtype(),$pDataY,$incY);
                 break;
             }
             default: {

@@ -16,6 +16,49 @@ use ArrayObject;
 use ArrayAccess;
 use SplFixedArray;
 
+function R(
+    int $start,
+    int $limit,
+) : Range
+{
+    if(func_num_args()!=2) {
+        throw new InvalidArgumentException('R must have only two arguments: "start" and "limit".');
+    }
+    return new Range(start:$start,limit:$limit);
+}
+
+class Range
+{
+    protected mixed $start;
+    protected mixed $limit;
+    protected mixed $delta;
+
+    public function __construct(
+        int|float $limit,
+        int|float $start=null,
+        int|float $delta=null)
+    {
+        $this->limit = $limit;
+        $this->start = $start ?? 0;
+        $this->delta = $delta ?? (($limit>=$start)? 1 : -1);
+    }
+
+    public function start() : mixed
+    {
+        return $this->start;
+    }
+
+    public function limit() : mixed
+    {
+        return $this->limit;
+    }
+
+    public function delta() : mixed
+    {
+        return $this->delta;
+    }
+}
+
 class MatlibTest extends TestCase
 {
     public function getMatlib()
@@ -252,33 +295,43 @@ class MatlibTest extends TestCase
             public function offsetExists( $offset ) : bool { throw new \Excpetion('not implement'); }
             public function offsetGet( $offset ) : mixed
             {
-                // for range spesification
                 if(is_array($offset)) {
+                    throw new InvalidArgumentException("offset style is old renge style.");
+                }
+                // for single index specification
+                if(is_numeric($offset)) {
                     $shape = $this->shape;
-                    array_shift($shape);
-                    $rowsCount = $offset[1]-$offset[0]+1;
-                    if(count($shape)>0) {
-                        $itemSize = (int)array_product($shape);
-                    } else {
-                        $itemSize = 1;
+                    $max = array_shift($shape);
+                    if(count($shape)==0) {
+                        return $this->buffer[$this->offset+$offset];
                     }
-                    if($rowsCount<0) {
-                        throw new OutOfRangeException('Invalid range');
-                    }
-                    array_unshift($shape,$rowsCount);
                     $size = (int)array_product($shape);
-                    $new = new self($this->buffer,$this->dtype,$shape,$this->offset+$offset[0]*$itemSize);
+                    $new = new self($this->buffer,$this->dtype,$shape,$this->offset+$offset*$size);
                     return $new;
                 }
-        
-                // for single index specification
+
+                // for range spesification
                 $shape = $this->shape;
-                $max = array_shift($shape);
-                if(count($shape)==0) {
-                    return $this->buffer[$this->offset+$offset];
+                array_shift($shape);
+                if(is_array($offset)) {
+                    $start = $offset[0];
+                    $limit = $offset[1]+1;
+                } else {
+                    $start = $offset->start();
+                    $limit = $offset->limit();
                 }
+                $rowsCount = $limit-$start;
+                if(count($shape)>0) {
+                    $itemSize = (int)array_product($shape);
+                } else {
+                    $itemSize = 1;
+                }
+                if($rowsCount<0) {
+                    throw new OutOfRangeException('Invalid range');
+                }
+                array_unshift($shape,$rowsCount);
                 $size = (int)array_product($shape);
-                $new = new self($this->buffer,$this->dtype,$shape,$this->offset+$offset*$size);
+                $new = new self($this->buffer,$this->dtype,$shape,$this->offset+$start*$itemSize);
                 return $new;
             }
             public function offsetSet( $offset , $value ) : void { throw new \Exception('not implement'); }
@@ -1320,103 +1373,117 @@ class MatlibTest extends TestCase
         ];
     }
 
-   public function translate_astype(NDArray $X, $dtype, NDArray $Y) : array
-   {
-       $n = $X->size();
-       $XX = $X->buffer();
-       $offX = $X->offset();
-       $YY = $Y->buffer();
-       $offY = $Y->offset();
+    public function translate_astype(NDArray $X, $dtype, NDArray $Y) : array
+    {
+        $n = $X->size();
+        $XX = $X->buffer();
+        $offX = $X->offset();
+        $YY = $Y->buffer();
+        $offY = $Y->offset();
+ 
+        return [
+            $n,
+            $dtype,
+            $XX,$offX,1,
+            $YY,$offY,1
+        ];
+    }
+ 
+    public function translate_searchsorted(
+        NDArray $A,
+        NDArray $X,
+        bool $right=null,
+        $dtype=null,
+        NDArray $Y=null
+        ) : array
+    {
+        if($A->ndim()==1) {
+            $individual = false;
+        } elseif($A->ndim()==2) {
+            $individual = true;
+        } else {
+            throw new InvalidArgumentException('A must be 1D or 2D NDArray.');
+        }
+        if($right===null) {
+            $right = false;
+        }
+        if($dtype===null) {
+            $dtype = NDArray::uint32;
+        }
+        if($Y===null) {
+            $Y = $this->alloc($X->shape(),$dtype);
+        }
+        $dtype = $Y->dtype();
+        if($dtype!=NDArray::uint32&&$dtype!=NDArray::int32&&
+            $dtype!=NDArray::uint64&&$dtype!=NDArray::int64) {
+            throw new InvalidArgumentException('dtype of Y must be int32 or int64');
+        }
+        if($X->shape()!=$Y->shape()) {
+            $shapeError = '('.implode(',',$X->shape()).'),('.implode(',',$Y->shape()).')';
+            throw new InvalidArgumentException("Unmatch shape of dimension: ".$shapeError);
+        }
+        if($individual) {
+            [$m,$n] = $A->shape();
+            if($m!=$X->size()) {
+                $shapeError = '('.implode(',',$A->shape()).'),('.implode(',',$X->shape()).')';
+                throw new InvalidArgumentException("Unmatch shape of dimension A,X: ".$shapeError);
+            }
+            $ldA = $n;
+        } else {
+            $m = $X->size();
+            $n = $A->size();
+            $ldA = 0;
+        }
+        $AA = $A->buffer();
+        $offA = $A->offset();
+        $XX = $X->buffer();
+        $offX = $X->offset();
+        $YY = $Y->buffer();
+        $offY = $Y->offset();
+ 
+        return [
+            $m,
+            $n,
+            $AA,$offA,$ldA,
+            $XX,$offX,1,
+            $right,
+            $YY,$offY,1
+        ];
+    }
 
-       return [
-           $n,
-           $dtype,
-           $XX,$offX,1,
-           $YY,$offY,1
-       ];
-   }
-
-   public function translate_searchsorted(
-       NDArray $A,
-       NDArray $X,
-       bool $right=null,
-       $dtype=null,
-       NDArray $Y=null
-       ) : array
-   {
-       if($A->ndim()!=1) {
-           throw new InvalidArgumentException('A must be 1D NDArray.');
-       }
-       if($right===null) {
-           $right = false;
-       }
-       if($dtype===null) {
-           $dtype = NDArray::uint32;
-       }
-       if($Y===null) {
-           $Y = $this->alloc($X->shape(),$dtype);
-       }
-       $dtype = $Y->dtype();
-       if($dtype!=NDArray::uint32&&$dtype!=NDArray::int32&&
-           $dtype!=NDArray::uint64&&$dtype!=NDArray::int64) {
-           throw new InvalidArgumentException('dtype of Y must be int32 or int64');
-       }
-       if($X->shape()!=$Y->shape()) {
-           $shapeError = '('.implode(',',$X->shape()).'),('.implode(',',$Y->shape()).')';
-           throw new InvalidArgumentException("Unmatch shape of dimension: ".$shapeError);
-       }
-       $m = $A->size();
-       $AA = $A->buffer();
-       $offA = $A->offset();
-       $n = $X->size();
-       $XX = $X->buffer();
-       $offX = $X->offset();
-       $YY = $Y->buffer();
-       $offY = $Y->offset();
-
-       return [
-           $m,
-           $AA,$offA,1,
-           $n,
-           $XX,$offX,1,
-           $right,
-           $YY,$offY,1
-       ];
-   }
-
-   public function translate_cumsum(
-       NDArray $X,
-       bool $exclusive=null,
-       bool $reverse=null,
-       NDArray $Y=null
-       ) : array
-   {
-       if($exclusive===null) {
-           $exclusive = false;
-       }
-       if($reverse===null) {
-           $reverse = false;
-       }
-       if($Y===null) {
-           $Y = $this->alloc($X->shape(),$X->dtype());
-       }
-       if($X->shape()!=$Y->shape()) {
-           $shapeError = '('.implode(',',$X->shape()).'),('.implode(',',$Y->shape()).')';
-           throw new InvalidArgumentException("Unmatch shape of dimension: ".$shapeError);
-       }
-       $n = $X->size();
-       $XX = $X->buffer();
-       $offX = $X->offset();
-       $YY = $Y->buffer();
-       $offY = $Y->offset();
-
-       return [
-           $n,
-           $XX,$offX,1,
-           $exclusive,
-           $reverse,
-           $YY,$offY,1
-       ];
+    public function translate_cumsum(
+        NDArray $X,
+        bool $exclusive=null,
+        bool $reverse=null,
+        NDArray $Y=null
+        ) : array
+    {
+        if($exclusive===null) {
+            $exclusive = false;
+        }
+        if($reverse===null) {
+            $reverse = false;
+        }
+        if($Y===null) {
+            $Y = $this->alloc($X->shape(),$X->dtype());
+        }
+        if($X->shape()!=$Y->shape()) {
+            $shapeError = '('.implode(',',$X->shape()).'),('.implode(',',$Y->shape()).')';
+            throw new InvalidArgumentException("Unmatch shape of dimension: ".$shapeError);
+        }
+        $n = $X->size();
+        $XX = $X->buffer();
+        $offX = $X->offset();
+        $YY = $Y->buffer();
+        $offY = $Y->offset();
+ 
+        return [
+            $n,
+            $XX,$offX,1,
+            $exclusive,
+            $reverse,
+            $YY,$offY,1
+        ];
     }
 
     public function translate_transpose(
@@ -1715,7 +1782,7 @@ class MatlibTest extends TestCase
  
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $min = $matlib->sum($N,$XX,$offX,$incX);
     }
  
@@ -1825,7 +1892,7 @@ class MatlibTest extends TestCase
  
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $min = $matlib->imin($N,$XX,$offX,$incX);
     }
  
@@ -1935,7 +2002,7 @@ class MatlibTest extends TestCase
  
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $min = $matlib->imax($N,$XX,$offX,$incX);
     }
  
@@ -2063,7 +2130,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->increment($N,$alpha,$XX,$offX,$incX,$beta);
     }
 
@@ -2196,7 +2263,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->reciprocal($N,$alpha,$XX,$offX,$incX,$beta);
     }
 
@@ -2324,7 +2391,7 @@ class MatlibTest extends TestCase
 
         $offA = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetA must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetA must be greater than or equals 0.');
         $matlib->maximum($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
@@ -2414,7 +2481,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->maximum($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
@@ -2547,7 +2614,7 @@ class MatlibTest extends TestCase
 
         $offA = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetA must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetA must be greater than or equals 0.');
         $matlib->minimum($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
@@ -2637,7 +2704,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->minimum($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
@@ -2770,7 +2837,7 @@ class MatlibTest extends TestCase
 
         $offA = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetA must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetA must be greater than or equals 0.');
         $matlib->greater($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
@@ -2860,7 +2927,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->greater($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
@@ -3006,7 +3073,7 @@ class MatlibTest extends TestCase
 
         $offA = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetA must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetA must be greater than or equals 0.');
         $matlib->less($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
@@ -3096,7 +3163,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->less($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
@@ -3280,7 +3347,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->multiply($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
     }
 
@@ -3382,7 +3449,7 @@ class MatlibTest extends TestCase
 
         $offA = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetA must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetA must be greater than or equals 0.');
         $matlib->multiply($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
     }
 
@@ -3565,7 +3632,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->add($trans,$M,$N,$alpha,$XX,$offX,$incX,$AA,$offA,$ldA);
     }
 
@@ -3667,7 +3734,7 @@ class MatlibTest extends TestCase
 
         $offA = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetA must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetA must be greater than or equals 0.');
         $matlib->add($trans,$M,$N,$alpha,$XX,$offX,$incX,$AA,$offA,$ldA);
     }
 
@@ -3848,7 +3915,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->duplicate($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
     }
 
@@ -3950,7 +4017,7 @@ class MatlibTest extends TestCase
 
         $offA = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetA must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetA must be greater than or equals 0.');
         $matlib->duplicate($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
     }
 
@@ -4075,7 +4142,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->square($N,$XX,$offX,$incX);
     }
 
@@ -4204,7 +4271,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->sqrt($N,$XX,$offX,$incX);
     }
 
@@ -4362,7 +4429,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->rsqrt($N,$alpha,$XX,$offX,$incX,$beta);
     }
 
@@ -4528,7 +4595,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->pow($trans,$M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);;
     }
 
@@ -4630,7 +4697,7 @@ class MatlibTest extends TestCase
 
         $offA = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetA must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetA must be greater than or equals 0.');
         $matlib->pow($trans,$M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);;
     }
 
@@ -4758,7 +4825,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->exp($N,$XX,$offX,$incX);
     }
 
@@ -4889,7 +4956,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->log($N,$XX,$offX,$incX);
     }
 
@@ -5006,7 +5073,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->tanh($N,$XX,$offX,$incX);
     }
 
@@ -5123,7 +5190,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->sin($N,$XX,$offX,$incX);
     }
 
@@ -5227,7 +5294,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->cos($N,$XX,$offX,$incX);
     }
 
@@ -5344,7 +5411,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->tan($N,$XX,$offX,$incX);
     }
 
@@ -5473,14 +5540,35 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
         $this->assertEquals([0,1,1,3],$Y->toArray());
 
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,true,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,true,$YY,$offsetY,$incY);
         $this->assertEquals([0,1,2,3],$Y->toArray());
+    }
+
+    public function testsearchsortedIndividual()
+    {
+        $matlib = $this->getMatlib();
+
+        $A = $this->array([
+            [1,   3,  5,   7,   9],
+            [1,   2,  3,   4,   5],
+            [0, 100, 20, 300, 400]
+        ]);
+        $X = $this->array([0, 5, 10]);
+        $Y = $this->zeros([3],NDArray::int32);
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+            $this->translate_searchsorted($A,$X,false,null,$Y);
+
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $this->assertEquals([0, 4, 1],$Y->toArray());
+
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,true,$YY,$offsetY,$incY);
+        $this->assertEquals([0, 5, 1],$Y->toArray());
     }
 
     public function testsearchsortedMinusM()
@@ -5490,13 +5578,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $m = 0;
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Argument m must be greater than 0.');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedMinusOffsetA()
@@ -5506,29 +5594,29 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $offsetA = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetA must be greater than equals 0.');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $this->expectExceptionMessage('Argument offsetA must be greater than or equals 0.');
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
-    public function testsearchsortedMinusIncA()
+    public function testsearchsortedMinusldA()
     {
         $matlib = $this->getMatlib();
 
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
-        $incA = 0;
+        $ldA = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument incA must be greater than 0.');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $this->expectExceptionMessage('Argument ldA must be greater than or equals 0.');
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedIllegalBufferA()
@@ -5538,13 +5626,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $AA = new \stdClass();
         $this->expectException(TypeError::class);
         $this->expectExceptionMessage('must be of type Interop\Polite\Math\Matrix\LinearBuffer');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedOverflowBufferAwithSize()
@@ -5554,13 +5642,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $AA = $this->array([1,2])->buffer();
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Vector specification too large for bufferA');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $this->expectExceptionMessage('Matrix specification too large for bufferA');
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedOverflowBufferAwithOffsetA()
@@ -5570,13 +5658,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $offsetA = 1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Vector specification too large for bufferA');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $this->expectExceptionMessage('Matrix specification too large for bufferA');
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedOverflowBufferAwithIncA()
@@ -5586,13 +5674,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
-        $incA = 2;
+        $ldA = 2;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Vector specification too large for bufferA');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $this->expectExceptionMessage('Matrix specification too large for bufferA');
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedMinusN()
@@ -5602,13 +5690,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $n = 0;
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Argument n must be greater than 0.');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedMinusOffsetX()
@@ -5618,13 +5706,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $offsetX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedMinusIncX()
@@ -5634,13 +5722,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $incX = 0;
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Argument incX must be greater than 0.');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedIllegalBufferX()
@@ -5650,13 +5738,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $XX = new \stdClass();
         $this->expectException(TypeError::class);
         $this->expectExceptionMessage('must be of type Interop\Polite\Math\Matrix\LinearBuffer');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedOverflowBufferXwithSize()
@@ -5666,13 +5754,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $XX = $this->array([1,2])->buffer();
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Vector specification too large for bufferX');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedOverflowBufferXwithOffsetX()
@@ -5682,13 +5770,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $offsetX = 1;
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Vector specification too large for bufferX');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedOverflowBufferXwithIncX()
@@ -5698,13 +5786,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $incX = 2;
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Vector specification too large for bufferX');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedMinusOffsetY()
@@ -5714,13 +5802,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $offsetY = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetY must be greater than equals 0.');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $this->expectExceptionMessage('Argument offsetY must be greater than or equals 0.');
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedMinusIncY()
@@ -5730,13 +5818,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $incY = 0;
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Argument incY must be greater than 0.');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedIllegalBufferY()
@@ -5746,13 +5834,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $YY = new \stdClass();
         $this->expectException(TypeError::class);
         $this->expectExceptionMessage('must be of type Interop\Polite\Math\Matrix\LinearBuffer');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedOverflowBufferYwithSize()
@@ -5762,13 +5850,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $YY = $this->array([1,2])->buffer();
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Vector specification too large for bufferY');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedOverflowBufferYwithOffsetY()
@@ -5778,13 +5866,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $offsetX = 1;
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Vector specification too large for bufferX');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedOverflowBufferYwithIncY()
@@ -5794,13 +5882,13 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4]);
         $X = $this->array([-1,1,2,5]);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $incY = 2;
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Vector specification too large for bufferY');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
     public function testsearchsortedUnmatchDataType()
@@ -5810,12 +5898,12 @@ class MatlibTest extends TestCase
         $A = $this->array([0,2,4],NDArray::float32);
         $X = $this->array([-1,1,2,5],NDArray::float64);
         $Y = $this->zeros([4],NDArray::int32);
-        [$m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
+        [$m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY] =
             $this->translate_searchsorted($A,$X,false,null,$Y);
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Unmatch data type for A and X');
-        $matlib->searchsorted($m,$AA,$offsetA,$incA,$n,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
+        $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
 //=========================================================================
@@ -5888,7 +5976,7 @@ class MatlibTest extends TestCase
 
         $offsetX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->cumsum($n,$XX,$offsetX,$incX,$exclusive,$reverse,$YY,$offsetY,$incY);
     }
 
@@ -5978,7 +6066,7 @@ class MatlibTest extends TestCase
 
         $offsetY = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetY must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetY must be greater than or equals 0.');
         $matlib->cumsum($n,$XX,$offsetX,$incX,$exclusive,$reverse,$YY,$offsetY,$incY);
     }
 
@@ -6110,7 +6198,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->zeros($N,$XX,$offX,$incX);
     }
 
@@ -6862,7 +6950,7 @@ class MatlibTest extends TestCase
              [16,17,18,19],
              [20,21,22,23]],
         ],NDArray::float32);
-        $A = $A[[1,2]];
+        $A = $A[R(1,3)];
         $B = $this->zeros([4,3,2],NDArray::float32);
         [
             $sourceShape,
@@ -6910,7 +6998,7 @@ class MatlibTest extends TestCase
              [20,21,22,23]],
         ],NDArray::float32);
         $origB = $this->zeros([5,3,2],NDArray::float32);
-        $B = $origB[[1,4]];
+        $B = $origB[R(1,5)];
         [
             $sourceShape,
             $permBuf,
@@ -6962,7 +7050,7 @@ class MatlibTest extends TestCase
              [16,17,18,19],
              [20,21,22,23]],
         ],NDArray::float64);
-        $A = $A[[1,2]];
+        $A = $A[R(1,3)];
         $B = $this->zeros([4,3,2],NDArray::float64);
         [
             $sourceShape,
@@ -7010,7 +7098,7 @@ class MatlibTest extends TestCase
              [20,21,22,23]],
         ],NDArray::float64);
         $origB = $this->zeros([5,3,2],NDArray::float64);
-        $B = $origB[[1,4]];
+        $B = $origB[R(1,5)];
         [
             $sourceShape,
             $permBuf,
@@ -7062,7 +7150,7 @@ class MatlibTest extends TestCase
              [16,17,18,19],
              [20,21,22,23]],
         ],NDArray::int32);
-        $A = $A[[1,2]];
+        $A = $A[R(1,3)];
         $B = $this->zeros([4,3,2],NDArray::int32);
         [
             $sourceShape,
@@ -7110,7 +7198,7 @@ class MatlibTest extends TestCase
              [20,21,22,23]],
         ],NDArray::int32);
         $origB = $this->zeros([5,3,2],NDArray::int32);
-        $B = $origB[[1,4]];
+        $B = $origB[R(1,5)];
         [
             $sourceShape,
             $permBuf,
@@ -7295,7 +7383,7 @@ class MatlibTest extends TestCase
         $matlib = $this->getMatlib();
 
         $ORGA = $this->ones([2,3,3]);
-        $A = $ORGA[[1,1]];
+        $A = $ORGA[R(1,2)];
         [
             $m,$n,$k,
             $AA, $offsetA,
@@ -8514,7 +8602,7 @@ class MatlibTest extends TestCase
 
         $offX = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetX must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetX must be greater than or equals 0.');
         $matlib->updateAddOnehot($m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY);
     }
 
@@ -8604,7 +8692,7 @@ class MatlibTest extends TestCase
 
         $offY = -1;
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Argument offsetY must be greater than equals 0.');
+        $this->expectExceptionMessage('Argument offsetY must be greater than or equals 0.');
         $matlib->updateAddOnehot($m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY);
     }
 
@@ -9556,7 +9644,7 @@ class MatlibTest extends TestCase
             $XX,$offX,$incX,
             $seed
         );
-        $x = $x[[0,$size-1]];
+        $x = $x[R(0,$size)];
 
         $y = $this->zeros([$base=500],NDArray::int32);
         [
@@ -9575,7 +9663,7 @@ class MatlibTest extends TestCase
             $XX,$offX,$incX,
             $seed
         );
-        $y = $y[[0,$size-1]];
+        $y = $y[R(0,$size)];
 
         $this->assertEquals(
                 NDArray::int32,$x->dtype());

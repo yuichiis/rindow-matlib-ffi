@@ -46,7 +46,7 @@ trait Utils
         string $name, BufferInterface $buffer, int $n, int $offset, int $inc) : void
     {
         if($offset<0) {
-            throw new InvalidArgumentException("Argument offset$name must be greater than equals 0.");
+            throw new InvalidArgumentException("Argument offset$name must be greater than or equals 0.");
         }
         if($inc<1) {
             throw new InvalidArgumentException("Argument inc$name must be greater than 0.");
@@ -61,7 +61,7 @@ trait Utils
         int $m, int $n, int $offset, int $ld) : void
     {
         if($offset<0) {
-            throw new InvalidArgumentException("Argument offset$name must be greater than equals 0.");
+            throw new InvalidArgumentException("Argument offset$name must be greater than or equals 0.");
         }
         if($ld<1) {
             throw new InvalidArgumentException("Argument ld$name must be greater than 0.");
