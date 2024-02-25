@@ -88,13 +88,15 @@ char* rindow_matlib_common_get_version(void);
 
 void* rindow_matlib_common_get_address(int32_t dtype, void *buffer, int32_t offset);
 
-float rindow_matlib_s_sum(int32_t n,float *x,int32_t incX, float sum);
-double rindow_matlib_d_sum(int32_t n,double *x,int32_t incX, double sum);
-int64_t rindow_matlib_i_sum(int32_t dtype, int32_t n,void *x,int32_t incX, int64_t sum);
-int32_t rindow_matlib_s_imax(int32_t n,float *x, int32_t incX, float floatMax);
-int32_t rindow_matlib_d_imax(int32_t n,double *x, int32_t incX, double floatMax);
-int32_t rindow_matlib_s_imin(int32_t n,float *x, int32_t incX, float floatMin);
-int32_t rindow_matlib_d_imin(int32_t n,double *x, int32_t incX, double floatMin);
+float rindow_matlib_s_sum(int32_t n,float *x,int32_t incX);
+double rindow_matlib_d_sum(int32_t n,double *x,int32_t incX);
+int64_t rindow_matlib_i_sum(int32_t dtype, int32_t n,void *x,int32_t incX);
+int32_t rindow_matlib_s_imax(int32_t n,float *x, int32_t incX);
+int32_t rindow_matlib_d_imax(int32_t n,double *x, int32_t incX);
+int32_t rindow_matlib_i_imax(int32_t dtype, int32_t n,void *x, int32_t incX);
+int32_t rindow_matlib_s_imin(int32_t n,float *x, int32_t incX);
+int32_t rindow_matlib_d_imin(int32_t n,double *x, int32_t incX);
+int32_t rindow_matlib_i_imin(int32_t dtype, int32_t n,void *x, int32_t incX);
 void rindow_matlib_s_increment(int32_t n, float *x, int32_t incX, float alpha, float beta);
 void rindow_matlib_d_increment(int32_t n, double *x, int32_t incX, double alpha, double beta);
 void rindow_matlib_s_reciprocal(int32_t n, float *x, int32_t incX, float alpha, float beta);

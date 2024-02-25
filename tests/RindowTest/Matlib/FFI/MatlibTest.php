@@ -1866,6 +1866,21 @@ class MatlibTest extends TestCase
  
         $min = $matlib->imin($N,$XX,$offX,$incX);
         $this->assertEquals(1,$min);
+
+        $X = $this->array([100,-10,1],dtype:NDArray::int32);
+        [$N,$XX,$offX,$incX] =
+            $this->translate_amin($X);
+ 
+        $min = $matlib->imin($N,$XX,$offX,$incX);
+        $this->assertEquals(1,$min);
+
+        $X = $this->array([100,10,1],dtype:NDArray::uint64);
+        [$N,$XX,$offX,$incX] =
+            $this->translate_amin($X);
+ 
+        $min = $matlib->imin($N,$XX,$offX,$incX);
+        $this->assertEquals(2,$min);
+
     }
  
     public function testMinMinusN()
@@ -1970,12 +1985,26 @@ class MatlibTest extends TestCase
     {
         $matlib = $this->getMatlib();
  
-        $X = $this->array([100,-10,-1000]);
+        $X = $this->array([100,1000,-10,-1000]);
         [$N,$XX,$offX,$incX] =
             $this->translate_amin($X);
  
-        $min = $matlib->imax($N,$XX,$offX,$incX);
-        $this->assertEquals(0,$min);
+        $max = $matlib->imax($N,$XX,$offX,$incX);
+        $this->assertEquals(1,$max);
+
+        $X = $this->array([100,1000,-10,-1000],dtype:NDArray::int32);
+        [$N,$XX,$offX,$incX] =
+            $this->translate_amin($X);
+ 
+        $max = $matlib->imax($N,$XX,$offX,$incX);
+        $this->assertEquals(1,$max);
+
+        $X = $this->array([100,1000, 0, 10],dtype:NDArray::uint64);
+        [$N,$XX,$offX,$incX] =
+            $this->translate_amin($X);
+ 
+        $max = $matlib->imax($N,$XX,$offX,$incX);
+        $this->assertEquals(1,$max);
     }
  
     public function testMaxMinusN()

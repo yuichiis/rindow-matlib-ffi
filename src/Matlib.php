@@ -73,14 +73,14 @@ class Matlib
         switch ($X->dtype()) {
             case NDArray::float32:{
                 $pDataX = $X->addr($offsetX);
-                // float rindow_matlib_s_sum(int32_t n,float *x,int32_t incX, float sum);
-                $result = $this->ffi->rindow_matlib_s_sum($n,$pDataX,$incX,0.0);
+                // float rindow_matlib_s_sum(int32_t n,float *x,int32_t incX);
+                $result = $this->ffi->rindow_matlib_s_sum($n,$pDataX,$incX);
                 break;
             }
             case NDArray::float64:{
                 $pDataX = $X->addr($offsetX);
-                // double rindow_matlib_d_sum(int32_t n,double *x,int32_t incX, double sum);
-                $result = $this->ffi->rindow_matlib_d_sum($n,$pDataX,$incX,0.0);
+                // double rindow_matlib_d_sum(int32_t n,double *x,int32_t incX);
+                $result = $this->ffi->rindow_matlib_d_sum($n,$pDataX,$incX);
                 break;
             }
             case NDArray::int8:
@@ -93,8 +93,8 @@ class Matlib
             case NDArray::uint64:
             case NDArray::bool: {
                 $pDataX = $X->addr($offsetX);
-                // int64_t rindow_matlib_i_sum(int32_t dtype, int32_t n,void *x,int32_t incX, int64_t sum);
-                $result = $this->ffi->rindow_matlib_i_sum($X->dtype(), $n, $pDataX, $incX, 0);
+                // int64_t rindow_matlib_i_sum(int32_t dtype, int32_t n,void *x,int32_t incX);
+                $result = $this->ffi->rindow_matlib_i_sum($X->dtype(), $n, $pDataX, $incX);
                 break;
             }
             default:{
@@ -116,16 +116,21 @@ class Matlib
         switch ($X->dtype()) {
             case NDArray::float32:{
                 $pDataX = $X->addr($offsetX);
-                $resultIdx = $this->ffi->rindow_matlib_s_imax($n,$pDataX,$incX,-INF);
+                $resultIdx = $this->ffi->rindow_matlib_s_imax($n,$pDataX,$incX);
                 break;
             }
             case NDArray::float64:{
                 $pDataX = $X->addr($offsetX);
-                $resultIdx = $this->ffi->rindow_matlib_d_imax($n,$pDataX,$incX,-INF);
+                $resultIdx = $this->ffi->rindow_matlib_d_imax($n,$pDataX,$incX);
                 break;
             }
             default:{
-                throw new InvalidArgumentException("Unsupported data type.");
+                if(!$this->is_integer_dtype($X->dtype())) {
+                    throw new InvalidArgumentException("Unsupported data type.");
+                }
+                $pDataX = $X->addr($offsetX);
+                $resultIdx = $this->ffi->rindow_matlib_i_imax($X->dtype(), $n, $pDataX, $incX);
+                break;
             }
         }
         return $resultIdx;
@@ -143,16 +148,21 @@ class Matlib
         switch ($X->dtype()) {
             case NDArray::float32:{
                 $pDataX = $X->addr($offsetX);
-                $resultIdx = $this->ffi->rindow_matlib_s_imin($n,$pDataX,$incX,INF);
+                $resultIdx = $this->ffi->rindow_matlib_s_imin($n,$pDataX,$incX);
                 break;
             }
             case NDArray::float64:{
                 $pDataX = $X->addr($offsetX);
-                $resultIdx = $this->ffi->rindow_matlib_d_imin($n,$pDataX,$incX,INF);
+                $resultIdx = $this->ffi->rindow_matlib_d_imin($n,$pDataX,$incX);
                 break;
             }
             default:{
-                throw new InvalidArgumentException("Unsupported data type.");
+                if(!$this->is_integer_dtype($X->dtype())) {
+                    throw new InvalidArgumentException("Unsupported data type.");
+                }
+                $pDataX = $X->addr($offsetX);
+                $resultIdx = $this->ffi->rindow_matlib_i_imin($X->dtype(), $n, $pDataX, $incX);
+                break;
             }
         }
         return $resultIdx;
