@@ -33,6 +33,17 @@ class Matlib
     const P_THREAD     = 1; // Matlib is compiled using normal threading model
     const P_OPENMP     = 2; // Matlib is compiled using OpenMP threading model
 
+    protected $dtypeToString = [
+        NDArray::bool=>'bool',
+        NDArray::int8=>'int8',   NDArray::uint8=>'uint8',
+        NDArray::int16=>'int16', NDArray::uint16=>'uint16',
+        NDArray::int32=>'int32', NDArray::uint32=>'uint32',
+        NDArray::int64=>'int64', NDArray::uint64=>'uint64',
+        NDArray::float16=>'float16',
+        NDArray::float32=>'float32', NDArray::float64=>'float64',
+        NDArray::complex64=>'complex64', NDArray::complex128=>'complex128',
+    ];
+
     protected object $ffi;
 
     public function __construct(FFI $ffi)
@@ -242,7 +253,8 @@ class Matlib
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         // Check Buffer X and A
         if($A->dtype()!=$X->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for A and X");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$X->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and X: ".$types);
         }
         switch ($A->dtype()) {
             case NDArray::float32: {
@@ -281,7 +293,8 @@ class Matlib
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         // Check Buffer X and A
         if($A->dtype()!=$X->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for A and X");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$X->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and X: ".$types);
         }
         switch ($A->dtype()) {
             case NDArray::float32: {
@@ -320,6 +333,7 @@ class Matlib
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         // Check Buffer X and A
         if($A->dtype()!=$X->dtype()) {
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$X->dtype()];
             throw new InvalidArgumentException("Unmatch data type for A and X");
         }
         switch ($A->dtype()) {
@@ -437,7 +451,8 @@ class Matlib
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         // Check Buffer X and A
         if($A->dtype()!=$X->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for A and X");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$X->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and X: ".$types);
         }
         switch ($A->dtype()) {
             case NDArray::float32: {
@@ -488,7 +503,8 @@ class Matlib
     
         // Check Buffer X and A
         if($X->dtype()!=$A->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for X and A");
+            $types = $this->dtypeToString[$X->dtype()].','.$this->dtypeToString[$A->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for X and A: ".$types);
         }
     
         switch ($X->dtype()) {
@@ -540,6 +556,7 @@ class Matlib
     
         // Check Buffer X and A
         if($X->dtype()!=$A->dtype()) {
+            $types = $this->dtypeToString[$X->dtype()].','.$this->dtypeToString[$A->dtype()];
             throw new InvalidArgumentException("Unmatch data type for X and A");
         }
     
@@ -591,6 +608,7 @@ class Matlib
     
         // Check Buffer X and A
         if($X->dtype()!=$A->dtype()) {
+            $types = $this->dtypeToString[$X->dtype()].','.$this->dtypeToString[$A->dtype()];
             throw new InvalidArgumentException("Unmatch data type for X and A");
         }
     
@@ -721,7 +739,8 @@ class Matlib
         $this->assert_vector_buffer_spec("X", $X,$cols,$offsetX,$incX);
         // Check Buffer X and A
         if($A->dtype()!=$X->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for A and X");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$X->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and X: ".$types);
         }
         switch ($X->dtype()) {
             case NDArray::float32: {
@@ -933,6 +952,8 @@ class Matlib
             case NDArray::uint32:
             case NDArray::int64:
             case NDArray::uint64:
+            case NDArray::complex64:
+            case NDArray::complex128:
             case NDArray::bool: {
                 $pDataX = $X->addr($offsetX);
                 $this->ffi->rindow_matlib_i_zeros($X->dtype(), $n, $pDataX, $incX);
@@ -1039,7 +1060,8 @@ class Matlib
     
         // Check Buffer X and Y
         if($X->dtype()!=$Y->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for X and Y");
+            $types = $this->dtypeToString[$X->dtype()].','.$this->dtypeToString[$Y->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for X and Y: ".$types);
         }
     
         switch ($X->dtype()) {
@@ -1087,6 +1109,7 @@ class Matlib
     
         // Check Buffer X and Y
         if($X->dtype()!=$Y->dtype()) {
+            $types = $this->dtypeToString[$X->dtype()].','.$this->dtypeToString[$Y->dtype()];
             throw new InvalidArgumentException("Unmatch data type for X and Y");
         }
     
@@ -1206,7 +1229,8 @@ class Matlib
         $this->assert_matrix_buffer_spec("B", $B,$rows,$cols,$offsetB,$ldB);
     
         if($A->dtype()!=$B->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type A and B");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$B->dtype()];
+            throw new InvalidArgumentException("Unmatch data type A and B: ".$types);
         }
     
         switch ($A->dtype()) {
@@ -1261,7 +1285,8 @@ class Matlib
         }
     
         if($A->dtype()!=$B->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type A and B");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$B->dtype()];
+            throw new InvalidArgumentException("Unmatch data type A and B: ".$types);
         }
     
         if($channelsFirst) {
@@ -1417,7 +1442,8 @@ class Matlib
     
         // Check Buffer A and X
         if($A->dtype()!=$X->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for A and X");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$X->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and X: ".$types);
         }
     
         switch ($A->dtype()) {
@@ -1459,7 +1485,8 @@ class Matlib
     
         // Check Buffer A and X
         if($X->dtype()!=$Y->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for X and Y");
+            $types = $this->dtypeToString[$X->dtype()].','.$this->dtypeToString[$Y->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for X and Y: ".$types);
         }
     
         switch ($X->dtype()) {
@@ -1521,6 +1548,7 @@ class Matlib
     
         // Check Buffer A and B
         if($A->dtype()!=$B->dtype()) {
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$B->dtype()];
             throw new InvalidArgumentException("Unmatch data type for A and B.");
         }
     
@@ -1656,7 +1684,8 @@ class Matlib
     
         // Check Buffer A and Y
         if($A->dtype()!=$B->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for A and B");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$B->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and B: ".$types);
         }
         if($X->dtype()==NDArray::bool) {
             throw new InvalidArgumentException("Data type of BufferX must not be bool");
@@ -1762,7 +1791,8 @@ class Matlib
     
         // Check Buffer A and Y
         if($A->dtype()!=$B->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for A and B");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$B->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and B: ".$types);
         }
         if($X->dtype()==NDArray::bool) {
             throw new InvalidArgumentException("Data type of BufferX must not be bool");
@@ -1889,7 +1919,8 @@ class Matlib
             throw new InvalidArgumentException("Axis2 range is too large for source array.");
         }
         if($A->dtype() != $Y->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$Y->dtype()];
+            throw new InvalidArgumentException("Unmatch data type: ".$types);
         }
     
         switch ($A->dtype()) {
@@ -1947,7 +1978,8 @@ class Matlib
     
         // Check Buffer A and Y
         if($A->dtype()!=$B->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for A and B");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$B->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and B: ".$types);
         }
     
         switch ($A->dtype()) {
@@ -2008,7 +2040,8 @@ class Matlib
     
         // Check Buffer A and B
         if($A->dtype()!=$B->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for A and B");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$B->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and B: ".$types);
         }
     
         switch ($A->dtype()) {
@@ -2062,7 +2095,8 @@ class Matlib
     
         // Check Buffer A and B
         if($A->dtype()!=$B->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type for A and B");
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$B->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and B: ".$types);
         }
     
         switch ($A->dtype()) {
@@ -2264,7 +2298,8 @@ class Matlib
         }
         // Check dtype and Buffer Y
         if($images->dtype()!=$cols->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type of images and cols");
+            $types = $this->dtypeToString[$images->dtype()].','.$this->dtypeToString[$cols->dtype()];
+            throw new InvalidArgumentException("Unmatch data type of images and cols: ".$types);
         }
         if($images->count()<$images_offset+$images_size) {
             throw new InvalidArgumentException("Images size is out of range");
@@ -2363,7 +2398,8 @@ class Matlib
 
         // Check dtype and Buffer Y
         if($images->dtype()!=$cols->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type of images and cols");
+            $types = $this->dtypeToString[$images->dtype()].','.$this->dtypeToString[$cols->dtype()];
+            throw new InvalidArgumentException("Unmatch data type of images and cols: ".$types);
         }
         if($images->count()<$images_offset+$images_size) {
             throw new InvalidArgumentException("Images size is out of range");
@@ -2470,7 +2506,8 @@ class Matlib
 
         // Check dtype and Buffer Y
         if($images->dtype()!=$cols->dtype()) {
-            throw new InvalidArgumentException("Unmatch data type of images and cols");
+            $types = $this->dtypeToString[$images->dtype()].','.$this->dtypeToString[$cols->dtype()];
+            throw new InvalidArgumentException("Unmatch data type of images and cols: ".$types);
         }
         if($images->count()<$images_offset+$images_size) {
             throw new InvalidArgumentException("Images size is out of range");
