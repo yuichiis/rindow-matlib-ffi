@@ -25,6 +25,9 @@ class MatlibFactory
         if(self::$ffi!==null) {
             return;
         }
+        if(!extension_loaded('ffi')) {
+            return;
+        }
         $headerFile = $headerFile ?? __DIR__.'/matlib.h';
         if($libFiles==null) {
             if(PHP_OS=='Linux') {
