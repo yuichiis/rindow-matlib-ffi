@@ -9,6 +9,7 @@
         "interop-phpobjects/polite-math": "~1.0.6"
     },
     "require-dev": {
+        "ext-ffi": "*",
         "rindow/rindow-math-buffer-ffi": "^1.0"
     },
     "autoload": {
