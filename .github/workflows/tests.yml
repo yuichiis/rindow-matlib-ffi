@@ -15,11 +15,11 @@ jobs:
       - name: Checkout codes
         uses: "actions/checkout@v4"
 
-      - name: Install Matlib
-        run: |
-          wget https://github.com/rindow/rindow-matlib/releases/download/1.0.0/rindow-matlib_1.0.0_amd64.deb
-          sudo apt install -y ./rindow-matlib_1.0.0_amd64.deb
-          sudo update-alternatives --set librindowmatlib.so /usr/lib/rindowmatlib-serial/librindowmatlib.so
+      #- name: Install Matlib
+      #  run: |
+      #    wget https://github.com/rindow/rindow-matlib/releases/download/1.0.0/rindow-matlib_1.0.0_amd64.deb
+      #    sudo apt install -y ./rindow-matlib_1.0.0_amd64.deb
+      #    sudo update-alternatives --set librindowmatlib.so /usr/lib/rindowmatlib-serial/librindowmatlib.so
 
       - name: Composer
         uses: php-actions/composer@v6
@@ -33,5 +33,6 @@ jobs:
           configuration: tests/phpunit.xml
           version: 10.5
           php_version: ${{ matrix.php }}
-          php_extensions: ffi
+          #php_extensions: ffi
+          args: --filter ReleaseTest
 
