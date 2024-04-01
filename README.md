@@ -49,8 +49,6 @@ Download the pre-build binary file.
 - https://github.com/rindow/rindow-matlib/releases
 
 Please install using the apt command. 
-And then set it to serial mode for use with PHP.
-
 ```shell
 $ sudo apt install ./rindow-matlib_X.X.X_amd64.deb
 ```
@@ -60,8 +58,8 @@ Since rindow-matlib currently uses OpenMP, choose the OpenMP version for OpenBLA
 Using the pthread version of OpenBLAS can cause contention, making it unstable and slow.
 
 ```shell
-$ sudo apt remove libopenblas0-pthread
 $ sudo apt install libopenblas0-openmp
+$ sudo apt remove libopenblas0-pthread
 ```
 
 If you cannot delete the pthread version of OpenBLAS, you can switch to it using the update-alternatives command.
