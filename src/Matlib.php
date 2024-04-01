@@ -61,6 +61,13 @@ class Matlib
         return $this->ffi->rindow_matlib_common_get_nprocs();
     }
 
+    public function getConfig() : string
+    {
+        $string = $this->ffi->rindow_matlib_common_get_version();
+        $config = 'Rindow-Matlib '.FFI::string($string);
+        return $config;
+    }
+
     public function getParallel() : int
     {
         return $this->ffi->rindow_matlib_common_get_parallel();
