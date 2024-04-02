@@ -55,7 +55,7 @@ $ sudo apt install ./rindow-matlib_X.X.X_amd64.deb
 
 Since rindow-matlib currently uses OpenMP, choose the OpenMP version for OpenBLAS as well.
 
-Using the pthread version of OpenBLAS can cause contention, making it unstable and slow.
+Using the pthread version of OpenBLAS can cause conflicts and become unstable and slow.
 
 ```shell
 $ sudo apt install libopenblas0-openmp
