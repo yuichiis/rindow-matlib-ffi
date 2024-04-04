@@ -5,6 +5,7 @@ use Interop\Polite\Math\Matrix\NDArray;
 use Interop\Polite\Math\Matrix\LinearBuffer as Buffer;
 use InvalidArgumentException;
 use RuntimeException;
+use DomainException;
 use LogicException;
 use FFI;
 
@@ -1011,7 +1012,7 @@ class Matlib
             case NDArray::float64: {
                 $pDataY = $Y->addr($offsetY);
                 $pDataX = $X->addr($offsetX);
-                if($this->ffi->rindow_matlib_d_onehot($X->dtype, $m, $n, $pDataX, $incX, $a, $pDataY, $ldY)) {
+                if($this->ffi->rindow_matlib_d_onehot($X->dtype(), $m, $n, $pDataX, $incX, $a, $pDataY, $ldY)) {
                     throw new RuntimeException("Label number is out of bounds.");
                 }
                 break;
