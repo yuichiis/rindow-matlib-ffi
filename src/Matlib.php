@@ -34,6 +34,7 @@ class Matlib
     const P_THREAD     = 1; // Matlib is compiled using normal threading model
     const P_OPENMP     = 2; // Matlib is compiled using OpenMP threading model
 
+    /** @var array<int,string> $dtypeToString */
     protected $dtypeToString = [
         NDArray::bool=>'bool',
         NDArray::int8=>'int8',   NDArray::uint8=>'uint8',
@@ -1212,7 +1213,7 @@ class Matlib
         int $n,
         float $alpha,
         Buffer $A, int $offsetA, int $ldA,
-        Buffer $B, int $offsetB, int $ldB)
+        Buffer $B, int $offsetB, int $ldB) : void
     {
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
@@ -1272,7 +1273,7 @@ class Matlib
         bool $verticalFlip,
         bool $horizontalFlip,
         bool $rgbFlip
-        )
+        ) : void
     {
         if($height<1) {
             throw new InvalidArgumentException("height must be greater then 0");
@@ -1352,7 +1353,7 @@ class Matlib
     public function fill(
         int $n,
         Buffer $V, int $offsetV,
-        Buffer $X, int $offsetX, int $incX)
+        Buffer $X, int $offsetX, int $incX) : void
     {
         $this->assert_shape_parameter("n", $n);
         // Check Buffer V
@@ -1879,7 +1880,7 @@ class Matlib
         int $sizeAxis1,
         int $startAxis2,
         int $sizeAxis2
-        )
+        ) : void
     {
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
@@ -2183,7 +2184,7 @@ class Matlib
         float|int $low,
         float|int $high,
         int $seed
-        )
+        ) : void
     {
         // Check Buffer X
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
@@ -2225,7 +2226,7 @@ class Matlib
         float $mean,
         float $scale,
         int $seed
-        )
+        ) : void
     {
         // Check Buffer X
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
@@ -2254,7 +2255,7 @@ class Matlib
         int $size,
         Buffer $X, int $offsetX, int $incX,
         int $seed
-        )
+        ) : void
     {
         // Check Buffer X
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
@@ -2294,7 +2295,7 @@ class Matlib
         Buffer $cols,
         int $cols_offset,
         int $cols_size
-        )
+        ) : void
     {
         $this->assert_buffer_size($images, $images_offset, $images_size,
             "Invalid images buffer offset or size");
@@ -2393,7 +2394,7 @@ class Matlib
         Buffer $cols,
         int $cols_offset,
         int $cols_size
-        )
+        ) : void
     {
         $this->assert_buffer_size($images, $images_offset, $images_size,
             "Invalid images buffer offset or size");
@@ -2501,7 +2502,7 @@ class Matlib
         Buffer $cols,
         int $cols_offset,
         int $cols_size
-        )
+        ) : void
     {
         $this->assert_buffer_size($images, $images_offset, $images_size,
             "Invalid images buffer offset or size");

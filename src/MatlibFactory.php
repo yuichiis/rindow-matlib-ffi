@@ -13,10 +13,13 @@ class MatlibFactory
     private static ?FFI $ffi = null;
     private static ?string $libFile = null;
 
+    /** @var array<string> $libs_win */
     protected array $libs_win = ['rindowmatlib.dll'];
+    /** @var array<string> $libs_linux */
     protected array $libs_linux = ['librindowmatlib.so'];
     protected ?string $error = null;
 
+    /** @param array<string> $libFiles */
     public function __construct(
         string $headerFile=null,
         array $libFiles=null,
@@ -93,6 +96,7 @@ class MatlibFactory
         return $this->Matlib();
     }
 
+    /** @return array<string,mixed> */
     public function config() : array
     {
         return [
