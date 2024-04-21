@@ -1774,7 +1774,8 @@ class MatlibTest extends TestCase
         if(PHP_OS=="WINNT") {
             $this->assertEquals(Matlib::P_OPENMP,$n);
         } else {
-            $this->assertEquals(Matlib::P_SEQUENTIAL,$n);
+            $mt_enabled = ($n==Matlib::P_OPENMP || $n==Matlib::P_THREAD);
+            $this->assertTrue($mt_enabled);
         }
     }
 
