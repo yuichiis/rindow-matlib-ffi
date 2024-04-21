@@ -2063,7 +2063,7 @@ class Matlib
             case NDArray::float64: {
                 $pDataA = $A->addr($offsetA);
                 $pDataB = $B->addr($offsetB);
-                $this->ffi->rindow_matlib_s_reducesum($m,$n,$k,$pDataA,$pDataB);
+                $this->ffi->rindow_matlib_d_reducesum($m,$n,$k,$pDataA,$pDataB);
                 break;
             }
             default: {
