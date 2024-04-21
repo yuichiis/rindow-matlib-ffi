@@ -13,10 +13,13 @@ class MatlibFactory
     private static ?FFI $ffi = null;
     private static ?string $libFile = null;
 
+    /** @var array<string> $libs_win */
     protected array $libs_win = ['rindowmatlib.dll'];
+    /** @var array<string> $libs_linux */
     protected array $libs_linux = ['librindowmatlib.so'];
     protected ?string $error = null;
 
+    /** @param array<string> $libFiles */
     public function __construct(
         string $headerFile=null,
         array $libFiles=null,
@@ -59,14 +62,14 @@ class MatlibFactory
             self::$libFile = $filename;
             break;
         }
-        if(PHP_OS=='Linux') {
-            if(self::$ffi!==null) {
-                $mode = self::$ffi->rindow_matlib_common_get_parallel();
-                if($mode==Matlib::P_OPENMP) {
-                    throw new RuntimeException('OpenMP does not work properly in the Linux version of PHP. Please switch to serial version of matlib.');
-                }
-            }
-        }
+        //if(PHP_OS=='Linux') {
+        //    if(self::$ffi!==null) {
+        //        $mode = self::$ffi->rindow_matlib_common_get_parallel();
+        //        if($mode==Matlib::P_OPENMP) {
+        //            throw new RuntimeException('OpenMP does not work properly in the Linux version of PHP. Please switch to serial version of matlib.');
+        //        }
+        //    }
+        //}
     }
 
     public function isAvailable() : bool
@@ -93,6 +96,7 @@ class MatlibFactory
         return $this->Matlib();
     }
 
+    /** @return array<string,mixed> */
     public function config() : array
     {
         return [

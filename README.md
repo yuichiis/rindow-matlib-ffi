@@ -18,7 +18,8 @@ Requirements
 ============
 
 - PHP 8.1 or PHP8.2 or PHP8.3
-- Rindow Matlib C Library
+- Rindow Matlib C Library(Windows 10 or Linux(Ubuntu 20.04 or Debian 12) or later)
+
 
 How to setup
 ============
@@ -43,16 +44,50 @@ C> cd \your\app\dir
 C> composer require rindow/rindow-matlib-ffi
 ```
 
-### How to setup for Ubuntu
+### How to setup for Linux
 Download the pre-build binary file.
 
 - https://github.com/rindow/rindow-matlib/releases
 
 Please install using the apt command. 
-And then set it to serial mode for use with PHP.
+```shell
+$ sudo apt install ./rindow-matlib_X.X.X_amd64.deb
+```
+
+Set it up using composer.
 
 ```shell
-$ sudo apt install ./rindow-matlib_X.X.X-X+ubuntuXX.XX_amd64.deb
+$ mkdir \your\app\dir
+$ cd \your\app\dir
+$ composer require rindow/rindow-matlib-ffi
+```
+
+### Troubleshooting for Linux
+Since rindow-matlib currently uses OpenMP, choose the OpenMP version for OpenBLAS as well.
+
+Using the pthread version of OpenBLAS can cause conflicts and become unstable and slow.
+This issue does not occur on Windows.
+
+If you have already installed the pthread version of OpenBLAS,
+```shell
+$ sudo apt install libopenblas0-openmp liblapacke
+$ sudo apt remove libopenblas0-pthread
+```
+
+But if you can't remove it, you can switch to it using the update-alternatives command.
+
+```shell
+$ sudo update-alternatives --config libopenblas.so.0-x86_64-linux-gnu
+$ sudo update-alternatives --config liblapack.so.3-x86_64-linux-gnu
+```
+
+If you really want to use the pthread version of OpenBLAS, please switch to the serial version of rindow-matlib.
+
+There are no operational mode conflicts with OpenBLAS on Windows.
+
+But, If you really want to use the pthread version of OpenBLAS, please switch to the serial version of rindow-matlib.
+
+```shell
 $ sudo update-alternatives --config librindowmatlib.so
 There are 2 choices for the alternative librindowmatlib.so (providing /usr/lib/librindowmatlib.so).
 
@@ -64,14 +99,8 @@ There are 2 choices for the alternative librindowmatlib.so (providing /usr/lib/l
 
 Press <enter> to keep the current choice[*], or type selection number: 2
 ```
+Choose the "rindowmatlib-serial".
 
-Set it up using composer.
-
-```shell
-$ mkdir \your\app\dir
-$ cd \your\app\dir
-$ composer require rindow/rindow-matlib-ffi
-```
 
 
 How to use

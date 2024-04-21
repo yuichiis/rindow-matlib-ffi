@@ -8,6 +8,7 @@ use Interop\Polite\Math\Matrix\NDArray;
 
 trait Utils
 {
+    /** @var array<int,bool> $integer_dtypes */
     protected array $integer_dtypes = [
         NDArray::int8 => true,
         NDArray::uint8 => true,
@@ -19,17 +20,18 @@ trait Utils
         NDArray::uint64 => true,
     ];
 
+    /** @var array<int,bool> $float_dtypes */
     protected array $float_dtypes = [
         NDArray::float32 => true,
         NDArray::float64 => true,
     ];
 
-    protected function is_integer_dtype(int $dtype)
+    protected function is_integer_dtype(int $dtype) : bool
     {
         return array_key_exists($dtype, $this->integer_dtypes);
     }
 
-    protected function is_float_dtype(int $dtype)
+    protected function is_float_dtype(int $dtype) : bool
     {
         return array_key_exists($dtype, $this->float_dtypes);
     }
