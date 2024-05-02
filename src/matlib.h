@@ -147,6 +147,8 @@ int32_t rindow_matlib_s_onehot(int32_t dtype, int32_t m, int32_t n, void *x, int
 int32_t rindow_matlib_d_onehot(int32_t dtype, int32_t m, int32_t n, void *x, int32_t incX, double alpha, double *a, int32_t ldA);
 void rindow_matlib_s_softmax(int32_t m, int32_t n, float *a, int32_t ldA);
 void rindow_matlib_d_softmax(int32_t m, int32_t n, double *a, int32_t ldA);
+void rindow_matlib_s_topk(int32_t m, int32_t n, float *input, int32_t k, int32_t sorted, float *values, int32_t *indices);
+void rindow_matlib_d_topk(int32_t m, int32_t n, double *input, int32_t k, int32_t sorted, double *values, int32_t *indices);
 void rindow_matlib_s_equal(int32_t n, float *x, int32_t incX, float *y, int32_t incY);
 void rindow_matlib_d_equal(int32_t n, double *x, int32_t incX, double *y, int32_t incY);
 void rindow_matlib_i_equal(int32_t dtype, int32_t n, void *x, int32_t incX, void *y, int32_t incY);

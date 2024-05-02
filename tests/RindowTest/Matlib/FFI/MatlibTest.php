@@ -9829,4 +9829,235 @@ class MatlibTest extends TestCase
             $this->zerosLike($cols)
             );
     }
+
+    /**
+    * @dataProvider providerDtypesFloats
+    */
+    public function testTopkNormal($params)
+    {
+        extract($params);
+
+        $matlib = $this->getMatlib();
+
+        $m = 2;
+        $n = 10;
+        $k = 3;
+        $sorted = true;
+
+        $input = $this->array([
+            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0,10.0],
+            [5.0, 4.0, 3.0, 2.0, 1.0, 5.0, 4.0, 3.0, 2.0, 1.0]
+        ],dtype:$dtype);
+
+        $values = $this->zeros([$m,$k],dtype:$dtype);
+        $indices = $this->zeros([$m,$k],dtype:NDArray::int32);
+
+        $input_buff     = $input->buffer();
+        $input_offset   = $input->offset();
+        $values_buff    = $values->buffer();
+        $values_offset  = $values->offset();
+        $indices_buff   = $indices->buffer();
+        $indices_offset = $indices->offset();
+        $matlib->topK(
+            $m, 
+            $n, 
+            $input_buff, $input_offset, 
+            $k, 
+            $sorted, 
+            $values_buff, $values_offset, 
+            $indices_buff, $indices_offset,
+        );
+
+        $this->assertEquals([
+            [10.0, 9.0, 8.0],
+            [ 5.0, 5.0, 4.0]
+        ],$values->toArray());
+
+        $selects = $this->zeros([$m,$k],dtype:$dtype);
+        $selects_buff = $selects->buffer();
+        $selects_offset   = $selects->offset();
+        for($i=0;$i<$m;$i++) {
+            $matlib->gather(
+                false, // bool $reverse,
+                false, // bool $addMode,
+                $k,
+                1,
+                $n,
+                $indices_buff, $indices_offset+$i*$k,
+                $input_buff, $input_offset+$i*$n,
+                $selects_buff, $selects_offset+$i*$k,
+            );
+        }
+
+        $this->assertEquals([
+            [10.0, 9.0, 8.0],
+            [ 5.0, 5.0, 4.0]
+        ],$selects->toArray());
+
+    }
+
+    /**
+    * @dataProvider providerDtypesFloats
+    */
+    public function testTopkLarge($params)
+    {
+        extract($params);
+
+        $matlib = $this->getMatlib();
+
+        $m = 2;
+        $n = 5000;
+        $k = 10;
+        $sorted = true;
+
+        $input = $this->zeros([$m,$n],dtype:$dtype);
+        $matlib->randomUniform(
+            $m*$n, $input->buffer(), $input->offset(), 1, 0.0, 1024.0, 0
+        );
+
+        $values = $this->zeros([$m,$k],dtype:$dtype);
+        $indices = $this->zeros([$m,$k],dtype:NDArray::int32);
+        
+        $input_buff     = $input->buffer();
+        $input_offset   = $input->offset();
+        $values_buff    = $values->buffer();
+        $values_offset  = $values->offset();
+        $indices_buff   = $indices->buffer();
+        $indices_offset = $indices->offset();
+        $matlib->topK(
+            $m, 
+            $n, 
+            $input_buff, $input_offset, 
+            $k, 
+            $sorted, 
+            $values_buff, $values_offset, 
+            $indices_buff, $indices_offset,
+        );
+
+        $inputArray = $input->toArray();
+        $SortedInput = [];
+        foreach($inputArray as $inp) {
+            arsort($inp,SORT_NUMERIC);
+            $SortedInput[] = $inp;
+        }
+
+        $i = 0;
+        foreach($SortedInput as $sortedInp) {
+            $j = 0;
+            foreach ($sortedInp as $topIndex => $topInp) {
+                if($topInp!=$values[$i][$j]) {
+                    $this->assertEquals($topInp,$values[$i][$j]);
+                    break;
+                }
+                //if($topIndex!=$indices[$i][$j]) {
+                //    $this->assertEquals($topIndex,$indices[$i][$j]);
+                //    break;
+                //}
+                if($topInp!=$inputArray[$i][$indices[$i][$j]]) {
+                    $this->assertEquals($topIndex,$indices[$i][$j]);
+                    break;
+                }
+                $j++;
+                if($j>=$k) {
+                    break;
+                }
+            }
+            $i++;
+        }
+        $this->assertTrue(true);
+    }
+
+    /**
+    * @dataProvider providerDtypesFloats
+    */
+    public function testTopkWithoutSorted($params)
+    {
+        extract($params);
+
+        $matlib = $this->getMatlib();
+
+        $m = 2;
+        $n = 5000;
+        $k = 10;
+        $sorted = false;
+
+        $input = $this->zeros([$m,$n],dtype:$dtype);
+        $matlib->randomUniform(
+            $m*$n, $input->buffer(), $input->offset(), 1, 0.0, 1024.0, 0
+        );
+
+        $values = $this->zeros([$m,$k],dtype:$dtype);
+        $indices = $this->zeros([$m,$k],dtype:NDArray::int32);
+        
+        $input_buff     = $input->buffer();
+        $input_offset   = $input->offset();
+        $values_buff    = $values->buffer();
+        $values_offset  = $values->offset();
+        $indices_buff   = $indices->buffer();
+        $indices_offset = $indices->offset();
+        $matlib->topK(
+            $m, 
+            $n, 
+            $input_buff, $input_offset, 
+            $k, 
+            $sorted, 
+            $values_buff, $values_offset, 
+            $indices_buff, $indices_offset,
+        );
+
+        $inputArray = $input->toArray();
+        $SortedInput = [];
+        foreach($inputArray as $inp) {
+            arsort($inp,SORT_NUMERIC);
+            $SortedInput[] = $inp;
+        }
+
+        $unmatch = false;
+        $i = 0;
+        foreach($SortedInput as $sortedInp) {
+            $j = 0;
+            foreach ($sortedInp as $topIndex => $topInp) {
+                if($topInp!=$values[$i][$j]) {
+                    $unmatch = true;
+                    break;
+                }
+                //if($topIndex!=$indices[$i][$j]) {
+                //    $this->assertEquals($topIndex,$indices[$i][$j]);
+                //    break;
+                //}
+                if($topInp!=$inputArray[$i][$indices[$i][$j]]) {
+                    $unmatch = true;
+                    break;
+                }
+                $j++;
+                if($j>=$k) {
+                    break;
+                }
+            }
+            $i++;
+        }
+        $this->assertTrue($unmatch);
+
+        $valuesArray = $values->toArray();
+        $indicesArray = $indices->toArray();
+        $i = 0;
+        foreach($SortedInput as $sortedInp) {
+            $j = 0;
+            foreach ($sortedInp as $topIndex => $topInp) {
+                if(!in_array($topInp,$valuesArray[$i])) {
+                    var_dump($valuesArray[$i]);
+                    $this->assertEquals($topInp,'notfound');
+                }
+                if(!in_array($topIndex,$indicesArray[$i])) {
+                    var_dump($indicesArray[$i]);
+                    $this->assertEquals($topIndex,'notfound');
+                }
+                $j++;
+                if($j>=$k) {
+                    break;
+                }
+            }
+            $i++;
+        }
+    }
 }
