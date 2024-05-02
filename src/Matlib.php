@@ -1058,7 +1058,7 @@ class Matlib
         bool $sorted,
         Buffer $values, int $offsetValues,
         Buffer $indices, int $offsetIndices
-        ): void
+        ) : void
     {
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
