@@ -1050,62 +1050,6 @@ class Matlib
         }
     }
 
-    public function topk(
-        int $m,
-        int $n,
-        Buffer $input, int $offsetInput,
-        int $k,
-        bool $sorted,
-        Buffer $values, int $offsetValues,
-        Buffer $indices, int $offsetIndices
-        ) : void
-    {
-        $this->assert_shape_parameter("m", $m);
-        $this->assert_shape_parameter("n", $n);
-        $this->assert_shape_parameter("k", $k);
-        $this->assert_matrix_buffer_spec("input", $input, $m,$n, $offsetInput, $n);
-        $this->assert_matrix_buffer_spec("values", $values, $m,$k, $offsetValues, $k);
-        $this->assert_matrix_buffer_spec("indices", $indices, $m,$k, $offsetIndices, $k);
-        if(!$this->is_integer_dtype($indices->dtype())) {
-            throw new InvalidArgumentException("indices must be integers");
-        }
-
-    
-        switch ($input->dtype()) {
-            case NDArray::float32: {
-                $pInput = $input->addr($offsetInput);
-                $pValues = $values->addr($offsetValues);
-                $pIndices = $indices->addr($offsetIndices);
-                $this->ffi->rindow_matlib_s_topk(
-                    $m, $n,
-                    $pInput,
-                    $k,
-                    $sorted,
-                    $pValues,
-                    $pIndices,
-                );
-                break;
-            }
-            case NDArray::float64: {
-                $pInput = $input->addr($offsetInput);
-                $pValues = $values->addr($offsetValues);
-                $pIndices = $indices->addr($offsetIndices);
-                $this->ffi->rindow_matlib_d_topk(
-                    $m, $n,
-                    $pInput,
-                    $k,
-                    $sorted,
-                    $pValues,
-                    $pIndices,
-                );
-                break;
-            }
-            default: {
-                throw new InvalidArgumentException("Unsupported data type.");
-            }
-        }
-    }
-
     /**
      * Y(i) := 1  ( X(i) == Y(i) )
      * Y(i) := 0  ( X(i) != Y(i) )
@@ -1695,6 +1639,62 @@ class Matlib
             case NDArray::float64: {
                 $pDataA = $A->addr($offsetA);
                 $this->ffi->rindow_matlib_d_bandpart($m,$n,$k,$pDataA,$lower,$upper);
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException("Unsupported data type.");
+            }
+        }
+    }
+
+    public function topk(
+        int $m,
+        int $n,
+        Buffer $input, int $offsetInput,
+        int $k,
+        bool $sorted,
+        Buffer $values, int $offsetValues,
+        Buffer $indices, int $offsetIndices
+        ) : void
+    {
+        $this->assert_shape_parameter("m", $m);
+        $this->assert_shape_parameter("n", $n);
+        $this->assert_shape_parameter("k", $k);
+        $this->assert_matrix_buffer_spec("input", $input, $m,$n, $offsetInput, $n);
+        $this->assert_matrix_buffer_spec("values", $values, $m,$k, $offsetValues, $k);
+        $this->assert_matrix_buffer_spec("indices", $indices, $m,$k, $offsetIndices, $k);
+        if(!$this->is_integer_dtype($indices->dtype())) {
+            throw new InvalidArgumentException("indices must be integers");
+        }
+
+    
+        switch ($input->dtype()) {
+            case NDArray::float32: {
+                $pInput = $input->addr($offsetInput);
+                $pValues = $values->addr($offsetValues);
+                $pIndices = $indices->addr($offsetIndices);
+                $this->ffi->rindow_matlib_s_topk(
+                    $m, $n,
+                    $pInput,
+                    $k,
+                    $sorted,
+                    $pValues,
+                    $pIndices,
+                );
+                break;
+            }
+            case NDArray::float64: {
+                $pInput = $input->addr($offsetInput);
+                $pValues = $values->addr($offsetValues);
+                $pIndices = $indices->addr($offsetIndices);
+                $this->ffi->rindow_matlib_d_topk(
+                    $m, $n,
+                    $pInput,
+                    $k,
+                    $sorted,
+                    $pValues,
+                    $pIndices,
+                );
                 break;
             }
             default: {
