@@ -10045,11 +10045,9 @@ class MatlibTest extends TestCase
             $j = 0;
             foreach ($sortedInp as $topIndex => $topInp) {
                 if(!in_array($topInp,$valuesArray[$i])) {
-                    var_dump($valuesArray[$i]);
                     $this->assertEquals($topInp,'notfound');
                 }
                 if(!in_array($topIndex,$indicesArray[$i])) {
-                    var_dump($indicesArray[$i]);
                     $this->assertEquals($topIndex,'notfound');
                 }
                 $j++;
