@@ -27,14 +27,14 @@ jobs:
           - name: PHP8.3
             os: ubuntu-latest
             php: '8.3'
+          - name: Windows
+            os: windows-latest
+            php: '8.3'
 
 ##          - name: macOS
 ##            os: macos-latest
 ##            php: '8.3'
 
-##          - name: Windows
-##            os: windows-latest
-##            php: '8.3'
   
     steps:
       - name: Setup PHP ${{ matrix.php }}
@@ -89,4 +89,14 @@ jobs:
       #    filter: ReleaseTest
 
       - name: PHPUnit Tests
-        run: phpunit -c tests
+        if: ${{ startsWith(matrix.os, 'ubuntu-') }}
+        run: | 
+          phpunit -c tests
+
+      - name: PHPUnit Tests (Windows)
+        if: ${{ startsWith(matrix.os, 'windows-') }}
+        run: | 
+          $currentDir = (Get-Location).Path
+          $matlibDir = Join-Path -Path $currentDir -ChildPath 'matlib'
+          $env:PATH = "$matlibDir;$env:PATH"        
+          phpunit -c tests
