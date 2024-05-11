@@ -97,6 +97,7 @@ jobs:
         if: ${{ startsWith(matrix.os, 'windows-') }}
         run: | 
           $currentDir = (Get-Location).Path
-          $matlibDir = Join-Path -Path $currentDir -ChildPath 'matlib'
-          $env:PATH = "$matlibDir;$env:PATH"        
+          $matlibDir = Join-Path -Path $currentDir -ChildPath 'matlib\bin'
+          $env:PATH = "$matlibDir;$env:PATH"
+          echo $Env:PATH
           phpunit -c tests
