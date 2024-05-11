@@ -74,7 +74,9 @@ jobs:
       #    path: src/
 
       - name: Composer
-        run: composer require phpstan/phpstan
+        run: |
+          composer require phpstan/phpstan
+          composer require phpunit/phpunit=10.5.*
 
       - name: PHP Static Analysys
         run: vendor/bin/phpstan
@@ -101,7 +103,4 @@ jobs:
           $currentDir = (Get-Location).Path
           $matlibDir = Join-Path -Path $currentDir -ChildPath 'matlib\bin'
           $env:PATH = "$matlibDir;$env:PATH"
-          echo $matlibDir
-          dir $matlibDir
-          php -m
-          phpunit -c tests
+          vendor/bin/phpunit -c tests
