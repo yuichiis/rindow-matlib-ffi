@@ -27,14 +27,13 @@ jobs:
           - name: PHP8.3
             os: ubuntu-latest
             php: '8.3'
-          - name: Windows
-            os: windows-latest
+          - name: macOS
+            os: macos-latest
             php: '8.3'
 
-##          - name: macOS
-##            os: macos-latest
+##          - name: Windows
+##            os: windows-latest
 ##            php: '8.3'
-
   
     steps:
       - name: Setup PHP ${{ matrix.php }}
@@ -64,18 +63,15 @@ jobs:
       #    php_version: ${{ matrix.php }}
       #    php_extensions: ffi
 
-      #- name: Composer
-      #  run: composer update
+      - name: Composer
+        run: |
+          composer update
 
       #- name: PHP Static Analysys
       #  uses: php-actions/phpstan@v3
       #  with:
       #    php_version: ${{ matrix.php }}
       #    path: src/
-
-      - name: Composer
-        run: |
-          composer update
 
       - name: PHP Static Analysys
         run: phpstan
@@ -102,4 +98,13 @@ jobs:
           $currentDir = (Get-Location).Path
           $matlibDir = Join-Path -Path $currentDir -ChildPath 'matlib\bin'
           $env:PATH = "$matlibDir;$env:PATH"
+          phpunit -c tests
+
+      - name: PHPUnit Tests (macOS)
+        if: ${{ startsWith(matrix.os, 'macos-') }}
+        run: |
+          curl -O https://github.com/${{ env.repository }}/releases/download/${{ env.testlib }}/rindow-matlib-${{ env.matlib }}-Darwin-arm64.tar.gz
+          tar -xzf rindow-matlib-${{ env.matlib }}-Darwin-arm64.tar.gz
+          sudo cp -r rindow-matlib-${{ env.matlib }}-Darwin-arm64/usr/include /usr/local/
+          sudo cp -r rindow-matlib-${{ env.matlib }}-Darwin-arm64/usr/lib /usr/local/
           phpunit -c tests
