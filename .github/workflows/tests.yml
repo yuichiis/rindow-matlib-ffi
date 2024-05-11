@@ -55,7 +55,7 @@ jobs:
       - name: Setup Matlib (Windows)
         if: ${{ startsWith(matrix.os, 'windows-') }}
         run: |
-          Invoke-WebRequest -Uri https://github.com/${repository}/releases/download/${testlib}/rindow-matlib_${matlib}_win64.zip -OutFile matlib.zip
+          Invoke-WebRequest -Uri https://github.com/${{ env.repository }}/releases/download/${{ env.testlib }}/rindow-matlib_${{ env.matlib }}_win64.zip -OutFile matlib.zip
           Expand-Archive -Path matlib.zip
           echo $Env:PATH
 
