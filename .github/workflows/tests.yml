@@ -57,7 +57,7 @@ jobs:
         run: |
           Invoke-WebRequest -Uri https://github.com/${{ env.repository }}/releases/download/${{ env.testlib }}/rindow-matlib-${{ env.matlib }}-win64.zip -OutFile matlib.zip
           Expand-Archive -Path matlib.zip
-          echo $Env:PATH
+          dir matlib\bin
 
         #    sudo update-alternatives --set librindowmatlib.so /usr/lib/rindowmatlib-serial/librindowmatlib.so
 
@@ -84,7 +84,7 @@ jobs:
 
       - name: PHP Static Analysys
         run: vendor/bin/phpstan
-        
+
       #- name: PHPUnit Tests
       #  uses: php-actions/phpunit@v3
       #  with:
@@ -105,5 +105,7 @@ jobs:
           $currentDir = (Get-Location).Path
           $matlibDir = Join-Path -Path $currentDir -ChildPath 'matlib\bin'
           $env:PATH = "$matlibDir;$env:PATH"
-          echo $Env:PATH
+          echo $matlibDir
+          dir $matlibDir
+          php -m
           phpunit -c tests
