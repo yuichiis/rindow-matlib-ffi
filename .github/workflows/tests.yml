@@ -6,13 +6,34 @@ on:
           - main
 
 jobs:
-  no_ext_tests:
-    runs-on: ubuntu-22.04
+  tests:
+    name: tests
+    runs-on: ${{ matrix.os }}
+    env:
+      matlib: 1.1.0
+      repository: ${{ github.repository }}
 
     strategy:
       fail-fast: true
       matrix:
-        php: ['8.1','8.2','8.3']
+        include:
+          - name: PHP8.1
+            os: ubuntu-latest
+            php: '8.1'
+          - name: PHP8.2
+            os: ubuntu-latest
+            php: '8.2'
+          - name: PHP8.3
+            os: ubuntu-latest
+            php: '8.3'
+
+##          - name: macOS
+##            os: macos-latest
+##            php: '8.3'
+
+##          - name: Windows
+##            os: windows-latest
+##            php: '8.3'
   
     steps:
       - name: Setup PHP ${{ matrix.php }}
@@ -25,12 +46,20 @@ jobs:
           #ini-values: "memory_limit=512M"
           extensions: ffi
 
-      - name: Setup Matlib
+      - name: Setup Matlib (Linux)
+        if: ${{ startsWith(matrix.os, 'ubuntu-') }}
         run: |
-          wget https://github.com/rindow/rindow-matlib/releases/download/1.0.0/rindow-matlib_1.0.0_amd64.deb
-          sudo apt install -y ./rindow-matlib_1.0.0_amd64.deb
+          wget https://github.com/${repository}/releases/download/${matlib}/rindow-matlib_${matlib}_amd64.deb
+          sudo apt install -y ./rindow-matlib_${matlib}_amd64.deb
 
-      #    sudo update-alternatives --set librindowmatlib.so /usr/lib/rindowmatlib-serial/librindowmatlib.so
+      - name: Setup Matlib (Windows)
+        if: ${{ startsWith(matrix.os, 'windows-') }}
+        run: |
+          Invoke-WebRequest -Uri https://github.com/${repository}/releases/download/${matlib}/rindow-matlib_${matlib}_win64.zip -OutFile matlib.zip
+          Expand-Archive -Path matlib.zip
+          echo $Env:PATH
+
+        #    sudo update-alternatives --set librindowmatlib.so /usr/lib/rindowmatlib-serial/librindowmatlib.so
 
       - name: Checkout codes
         uses: "actions/checkout@v4"
