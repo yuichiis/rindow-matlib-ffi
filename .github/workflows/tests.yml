@@ -108,4 +108,10 @@ jobs:
           ls -l
           sudo cp -r usr/include /usr/local/
           sudo cp -r usr/lib /usr/local/
+          echo /usr/local
+          ls -l /usr/local/
+          echo /usr/local/include
+          ls -l /usr/local/include
+          echo /usr/local/lib
+          ls -l /usr/local/lib
           phpunit -c tests
