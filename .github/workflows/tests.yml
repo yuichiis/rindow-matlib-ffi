@@ -54,6 +54,16 @@ jobs:
 
         #    sudo update-alternatives --set librindowmatlib.so /usr/lib/rindowmatlib-serial/librindowmatlib.so
 
+      - name: Setup Matlib (macOS)
+        if: ${{ startsWith(matrix.os, 'macos-') }}
+        run: |
+          brew install libomp
+          curl https://github.com/${{ env.repository }}/releases/download/${{ env.testlib }}/rindow-matlib-${{ env.matlib }}-Darwin-arm64.tar.gz -O -L
+          tar -xzf rindow-matlib-${{ env.matlib }}-Darwin-arm64.tar.gz
+          sudo cp -r usr/include /usr/local/
+          sudo cp -r usr/lib /usr/local/
+
+
       - name: Checkout codes
         uses: "actions/checkout@v4"
 
@@ -90,6 +100,11 @@ jobs:
         run: | 
           phpunit -c tests
 
+      - name: PHPUnit Tests (macOS)
+        if: ${{ startsWith(matrix.os, 'macos-') }}
+        run: |
+          phpunit -c tests
+
       - name: PHPUnit Tests (Windows)
         if: ${{ startsWith(matrix.os, 'windows-') }}
         run: | 
@@ -98,21 +113,4 @@ jobs:
           $currentDir = (Get-Location).Path
           $matlibDir = Join-Path -Path $currentDir -ChildPath 'matlib\bin'
           $env:PATH = "$matlibDir;$env:PATH"
-          phpunit -c tests
-
-      - name: PHPUnit Tests (macOS)
-        if: ${{ startsWith(matrix.os, 'macos-') }}
-        run: |
-          brew install libomp
-          curl https://github.com/${{ env.repository }}/releases/download/${{ env.testlib }}/rindow-matlib-${{ env.matlib }}-Darwin-arm64.tar.gz -O -L
-          tar -xzf rindow-matlib-${{ env.matlib }}-Darwin-arm64.tar.gz
-          ls -l
-          sudo cp -r usr/include /usr/local/
-          sudo cp -r usr/lib /usr/local/
-          echo /usr/local
-          ls -l /usr/local/
-          echo /usr/local/include
-          ls -l /usr/local/include
-          echo /usr/local/lib
-          ls -l /usr/local/lib
           phpunit -c tests
