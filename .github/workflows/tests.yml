@@ -54,10 +54,10 @@ jobs:
 
         #    sudo update-alternatives --set librindowmatlib.so /usr/lib/rindowmatlib-serial/librindowmatlib.so
 
-      - name: Setup Matlib (macOS)
-        if: ${{ startsWith(matrix.os, 'macos-') }}
-        run: |
-          brew install libomp
+      #- name: Setup Matlib (macOS)
+      #  if: ${{ startsWith(matrix.os, 'macos-') }}
+      #  run: |
+      #    brew install libomp
 
       - name: Checkout codes
         uses: "actions/checkout@v4"
@@ -98,6 +98,7 @@ jobs:
       - name: PHPUnit Tests (macOS)
         if: ${{ startsWith(matrix.os, 'macos-') }}
         run: |
+          brew install libomp
           curl https://github.com/${{ env.repository }}/releases/download/${{ env.testlib }}/rindow-matlib-${{ env.matlib }}-Darwin-arm64.tar.gz -O -L
           tar -xzf rindow-matlib-${{ env.matlib }}-Darwin-arm64.tar.gz
           sudo cp -r usr/include /usr/local/
