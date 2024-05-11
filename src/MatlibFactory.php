@@ -58,8 +58,7 @@ class MatlibFactory
             try {
                 $ffi = FFI::cdef($code,$filename);
             } catch(FFIException $e) {
-                echo $e->getMessage()."\n";
-                $this->error = "$filename not found";
+                $this->error = "$filename not found: ".$e->getMessage();
                 continue;
             }
             $this->error = null;
