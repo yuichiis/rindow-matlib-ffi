@@ -43,7 +43,7 @@ jobs:
           php-version: ${{ matrix.php }}
           # PHP Extras
           coverage: none
-          tools: composer, phpunit:10.5
+          tools: composer, phpunit:10.5, phpstan
           #ini-values: "memory_limit=512M"
           extensions: ffi
 
@@ -75,11 +75,10 @@ jobs:
 
       - name: Composer
         run: |
-          composer require phpstan/phpstan
-          composer require phpunit/phpunit=10.5.*
+          composer update
 
       - name: PHP Static Analysys
-        run: vendor/bin/phpstan
+        run: phpstan
 
       #- name: PHPUnit Tests
       #  uses: php-actions/phpunit@v3
