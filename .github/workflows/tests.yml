@@ -54,11 +54,6 @@ jobs:
 
         #    sudo update-alternatives --set librindowmatlib.so /usr/lib/rindowmatlib-serial/librindowmatlib.so
 
-      #- name: Setup Matlib (macOS)
-      #  if: ${{ startsWith(matrix.os, 'macos-') }}
-      #  run: |
-      #    brew install libomp
-
       - name: Checkout codes
         uses: "actions/checkout@v4"
 
