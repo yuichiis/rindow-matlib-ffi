@@ -105,6 +105,7 @@ jobs:
         run: |
           curl -O https://github.com/${{ env.repository }}/releases/download/${{ env.testlib }}/rindow-matlib-${{ env.matlib }}-Darwin-arm64.tar.gz
           tar -xzf rindow-matlib-${{ env.matlib }}-Darwin-arm64.tar.gz
+          ls -l
           sudo cp -r rindow-matlib-${{ env.matlib }}-Darwin-arm64/usr/include /usr/local/
           sudo cp -r rindow-matlib-${{ env.matlib }}-Darwin-arm64/usr/lib /usr/local/
           phpunit -c tests
