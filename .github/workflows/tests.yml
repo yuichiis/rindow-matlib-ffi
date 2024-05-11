@@ -102,4 +102,4 @@ jobs:
           $currentDir = (Get-Location).Path
           $matlibDir = Join-Path -Path $currentDir -ChildPath 'matlib\bin'
           $env:PATH = "$matlibDir;$env:PATH"
-          vendor/bin/phpunit -c tests
+          phpunit -c tests
