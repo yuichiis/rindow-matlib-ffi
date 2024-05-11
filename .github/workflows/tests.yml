@@ -70,15 +70,21 @@ jobs:
       #    php_version: ${{ matrix.php }}
       #    php_extensions: ffi
 
+      #- name: Composer
+      #  run: composer update
+
+      #- name: PHP Static Analysys
+      #  uses: php-actions/phpstan@v3
+      #  with:
+      #    php_version: ${{ matrix.php }}
+      #    path: src/
+
       - name: Composer
-        run: composer update
+        run: composer require phpstan/phpstan
 
       - name: PHP Static Analysys
-        uses: php-actions/phpstan@v3
-        with:
-          php_version: ${{ matrix.php }}
-          path: src/
-
+        run: vendor/bin/phpstan
+        
       #- name: PHPUnit Tests
       #  uses: php-actions/phpunit@v3
       #  with:
