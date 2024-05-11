@@ -11,6 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       matlib: 1.1.0
+      testlib: 0.0.11
       repository: ${{ github.actor }}/rindow-matlib
 
     strategy:
@@ -49,13 +50,12 @@ jobs:
       - name: Setup Matlib (Linux)
         if: ${{ startsWith(matrix.os, 'ubuntu-') }}
         run: |
-          wget https://github.com/${repository}/releases/download/${matlib}/rindow-matlib_${matlib}_amd64.deb
+          wget https://github.com/${repository}/releases/download/${testlib}/rindow-matlib_${matlib}_amd64.deb
           sudo apt install -y ./rindow-matlib_${matlib}_amd64.deb
-
       - name: Setup Matlib (Windows)
         if: ${{ startsWith(matrix.os, 'windows-') }}
         run: |
-          Invoke-WebRequest -Uri https://github.com/${repository}/releases/download/${matlib}/rindow-matlib_${matlib}_win64.zip -OutFile matlib.zip
+          Invoke-WebRequest -Uri https://github.com/${repository}/releases/download/${testlib}/rindow-matlib_${matlib}_win64.zip -OutFile matlib.zip
           Expand-Archive -Path matlib.zip
           echo $Env:PATH
 
