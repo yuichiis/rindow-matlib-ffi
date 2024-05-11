@@ -52,12 +52,6 @@ jobs:
         run: |
           wget https://github.com/${repository}/releases/download/${testlib}/rindow-matlib_${matlib}_amd64.deb
           sudo apt install -y ./rindow-matlib_${matlib}_amd64.deb
-      - name: Setup Matlib (Windows)
-        if: ${{ startsWith(matrix.os, 'windows-') }}
-        run: |
-          Invoke-WebRequest -Uri https://github.com/${{ env.repository }}/releases/download/${{ env.testlib }}/rindow-matlib-${{ env.matlib }}-win64.zip -OutFile matlib.zip
-          Expand-Archive -Path matlib.zip
-          dir matlib\bin
 
         #    sudo update-alternatives --set librindowmatlib.so /usr/lib/rindowmatlib-serial/librindowmatlib.so
 
@@ -102,6 +96,8 @@ jobs:
       - name: PHPUnit Tests (Windows)
         if: ${{ startsWith(matrix.os, 'windows-') }}
         run: | 
+          Invoke-WebRequest -Uri https://github.com/${{ env.repository }}/releases/download/${{ env.testlib }}/rindow-matlib-${{ env.matlib }}-win64.zip -OutFile matlib.zip
+          Expand-Archive -Path matlib.zip
           $currentDir = (Get-Location).Path
           $matlibDir = Join-Path -Path $currentDir -ChildPath 'matlib\bin'
           $env:PATH = "$matlibDir;$env:PATH"
