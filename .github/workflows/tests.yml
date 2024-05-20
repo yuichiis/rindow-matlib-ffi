@@ -33,9 +33,10 @@ jobs:
           - name: macOS-x86_64
             os: macos-13
             php: '8.3'
-          - name: Windows
-            os: windows-latest
-            php: '8.3'
+
+#          - name: Windows
+#            os: windows-latest
+#            php: '8.3'
 
   
     steps:
