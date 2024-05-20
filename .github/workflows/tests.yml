@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       matlib: 1.1.0
-      testlib: 0.0.11
+      testlib: 0.0.14
       repository: ${{ github.actor }}/rindow-matlib
 
     strategy:
