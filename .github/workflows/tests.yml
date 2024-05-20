@@ -15,7 +15,7 @@ jobs:
       repository: ${{ github.actor }}/rindow-matlib
 
     strategy:
-      fail-fast: true
+      #fail-fast: true
       matrix:
         include:
           - name: PHP8.1
@@ -27,13 +27,16 @@ jobs:
           - name: PHP8.3
             os: ubuntu-latest
             php: '8.3'
-          - name: macOS
+          - name: Windows
+            os: windows-latest
+            php: '8.3'
+          - name: macOS-arm64
             os: macos-latest
             php: '8.3'
+          - name: macOS-x86_64
+            os: macos-13
+            php: '8.3'
 
-##          - name: Windows
-##            os: windows-latest
-##            php: '8.3'
   
     steps:
       - name: Setup PHP ${{ matrix.php }}
