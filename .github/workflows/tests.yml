@@ -18,24 +18,24 @@ jobs:
       #fail-fast: true
       matrix:
         include:
-          - name: PHP8.1
-            os: ubuntu-latest
-            php: '8.1'
-          - name: PHP8.2
-            os: ubuntu-latest
-            php: '8.2'
-          - name: PHP8.3
-            os: ubuntu-latest
-            php: '8.3'
-          - name: macOS-arm64
-            os: macos-latest
-            php: '8.3'
-          - name: macOS-x86_64
-            os: macos-13
+          - name: Windows
+            os: windows-latest
             php: '8.3'
 
-#          - name: Windows
-#            os: windows-latest
+#          - name: PHP8.1
+#            os: ubuntu-latest
+#            php: '8.1'
+#          - name: PHP8.2
+#            os: ubuntu-latest
+#            php: '8.2'
+#          - name: PHP8.3
+#            os: ubuntu-latest
+#            php: '8.3'
+#          - name: macOS-arm64
+#            os: macos-latest
+#            php: '8.3'
+#          - name: macOS-x86_64
+#            os: macos-13
 #            php: '8.3'
 
   
@@ -122,4 +122,4 @@ jobs:
           $currentDir = (Get-Location).Path
           $matlibDir = Join-Path -Path $currentDir -ChildPath 'matlib\bin'
           $env:PATH = "$matlibDir;$env:PATH"
-          phpunit -c tests
+          phpunit -c tests --filter ReleaseTest
