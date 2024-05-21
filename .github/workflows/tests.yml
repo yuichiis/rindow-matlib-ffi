@@ -122,4 +122,4 @@ jobs:
           $currentDir = (Get-Location).Path
           $matlibDir = Join-Path -Path $currentDir -ChildPath 'matlib\bin'
           $env:PATH = "$matlibDir;$env:PATH"
-          phpunit -c tests --filter MatlibTest::testGetNumThreads
+          phpunit -c tests --filter MatlibTest::testSumNormal
