@@ -1920,6 +1920,195 @@ class Matlib
     }
 
     /**
+    *      B(n,k) := A(X(n),k)
+    */
+    public function gatherb(
+        bool $reverse,
+        bool $addMode,
+        int $m,
+        int $n,
+        int $k,
+        int $numClass,
+        Buffer $A, int $offsetA,
+        Buffer $X, int $offsetX,
+        Buffer $B, int $offsetB
+        ) : void
+    {
+        $this->assert_shape_parameter("m", $m);
+        $this->assert_shape_parameter("n", $n);
+        $this->assert_shape_parameter("k", $k);
+        $this->assert_shape_parameter("numClass", $numClass);
+    
+        $this->assert_matrix_buffer_spec("A", $A, $m*$n,$k, $offsetA, $k);
+        $this->assert_vector_buffer_spec("X", $X, $m, $offsetX, 1);
+        $this->assert_matrix_buffer_spec("B", $B, $m*$n, $k, $offsetB, $k);
+    
+        // Check Buffer A and Y
+        if($A->dtype()!=$B->dtype()) {
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$B->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and B: ".$types);
+        }
+        if($X->dtype()!=NDArray::int32) {
+            throw new InvalidArgumentException("Data type of BufferX must be int32");
+        }
+    
+        switch ($A->dtype()) {
+            case NDArray::float32: {
+                $pDataX = $X->addr($offsetX);
+                $pDataA = $A->addr($offsetA);
+                $pDataB = $B->addr($offsetB);
+                $errcode = $this->ffi->rindow_matlib_s_gatherb($reverse,$addMode,$m,$n,$k,$numClass,$pDataA,$pDataX,$pDataB);
+                if($errcode) {
+                    if($errcode == self::E_UNSUPPORTED_DATA_TYPE) {
+                        throw new InvalidArgumentException("Unsupported data type.");
+                    } else if($errcode == self::E_PERM_OUT_OF_RANGE) {
+                        throw new RuntimeException("Label number is out of bounds.");
+                    } else {
+                        throw new LogicException(sprintf("Unknown error.(%d)", $errcode));
+                    }
+                }
+                break;
+            }
+            case NDArray::float64: {
+                $pDataX = $X->addr($offsetX);
+                $pDataA = $A->addr($offsetA);
+                $pDataB = $B->addr($offsetB);
+                $errcode = $this->ffi->rindow_matlib_d_gatherb($reverse,$addMode,$m,$n,$k,$numClass,$pDataA,$pDataX,$pDataB);
+                if($errcode) {
+                    if($errcode == self::E_UNSUPPORTED_DATA_TYPE) {
+                        throw new InvalidArgumentException("Unsupported data type.");
+                    } else if($errcode == self::E_PERM_OUT_OF_RANGE) {
+                        throw new RuntimeException("Label number is out of bounds.");
+                    } else {
+                        throw new LogicException(sprintf("Unknown error.(%d)", $errcode));
+                    }
+                }
+                break;
+            }
+            default: {
+                if(!$this->is_integer_dtype($A->dtype())&&NDArray::bool!=$A->dtype()) {
+                        throw new InvalidArgumentException("Unsupported data type.");
+                }
+                $pDataX = $X->addr($offsetX);
+                $pDataA = $A->addr($offsetA);
+                $pDataB = $B->addr($offsetB);
+                $errcode = $this->ffi->rindow_matlib_i_gatherb($reverse,$addMode,$m,$n,$k,$numClass,$A->dtype(),$pDataA,$pDataX,$pDataB);
+                if($errcode) {
+                    if($errcode == self::E_UNSUPPORTED_DATA_TYPE) {
+                        throw new InvalidArgumentException("Unsupported data type.");
+                    } else if($errcode == self::E_PERM_OUT_OF_RANGE) {
+                        throw new RuntimeException("Label number is out of bounds.");
+                    } else {
+                        throw new LogicException(sprintf("Unknown error.(%d)", $errcode));
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    /**
+     * A: (m, (paramShape), k)
+     * X: (m, n, index_depth)
+     * B: (m, n, k)
+     * B(m, n, k) := A(m,(X(m,n)),k)
+     */
+    public function gathernd(
+        bool $reverse,
+        bool $addMode,
+        int $m, // num_indices=num_batchs
+        int $n, // outer_shape
+        int $k, // inner_shape
+        int $indexDepth,
+        Buffer $paramShape, // paramShape[indexDepth]
+        Buffer $A, int $offsetA,
+        Buffer $X, int $offsetX,
+        Buffer $B, int $offsetB,
+        ) : void
+    {
+        $this->assert_shape_parameter("m", $m);
+        $this->assert_shape_parameter("n", $n);
+        $this->assert_shape_parameter("k", $k);
+        $this->assert_shape_parameter("indexDepth", $indexDepth);
+
+        $this->assert_matrix_buffer_spec("A", $A, $m*$n,$k, $offsetA, $k);
+        $this->assert_vector_buffer_spec("X", $X, $m, $offsetX, 1);
+        $this->assert_matrix_buffer_spec("B", $B, $m*$n, $k, $offsetB, $k);
+        if(count($paramShape)<$indexDepth) {
+            throw new InvalidArgumentException("Buffer paramShape is too small for indexDepth.");
+        }
+    
+        // Check Buffer A and Y
+        if($A->dtype()!=$B->dtype()) {
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$B->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and B: ".$types);
+        }
+        if($X->dtype()!=NDArray::int32) {
+            throw new InvalidArgumentException("Data type of BufferX must be int32");
+        }
+        if($paramShape->dtype()!=NDArray::int32) {
+            throw new InvalidArgumentException("Data type of paramShape must be int32");
+        }
+    
+        switch ($A->dtype()) {
+            case NDArray::float32: {
+                $pDataX = $X->addr($offsetX);
+                $pDataA = $A->addr($offsetA);
+                $pDataB = $B->addr($offsetB);
+                $pParamShape = $paramShape->addr(0);
+                $errcode = $this->ffi->rindow_matlib_s_gathernd($reverse,$addMode,$m,$n,$k,$indexDepth,$pParamShape,$pDataA,$pDataX,$pDataB);
+                if($errcode) {
+                    if($errcode == self::E_UNSUPPORTED_DATA_TYPE) {
+                        throw new InvalidArgumentException("Unsupported data type.");
+                    } else if($errcode == self::E_PERM_OUT_OF_RANGE) {
+                        throw new RuntimeException("Label number is out of bounds.");
+                    } else {
+                        throw new LogicException(sprintf("Unknown error.(%d)", $errcode));
+                    }
+                }
+                break;
+            }
+            case NDArray::float64: {
+                $pDataX = $X->addr($offsetX);
+                $pDataA = $A->addr($offsetA);
+                $pDataB = $B->addr($offsetB);
+                $pParamShape = $paramShape->addr(0);
+                $errcode = $this->ffi->rindow_matlib_d_gathernd($reverse,$addMode,$m,$n,$k,$indexDepth,$pParamShape,$pDataA,$pDataX,$pDataB);
+                if($errcode) {
+                    if($errcode == self::E_UNSUPPORTED_DATA_TYPE) {
+                        throw new InvalidArgumentException("Unsupported data type.");
+                    } else if($errcode == self::E_PERM_OUT_OF_RANGE) {
+                        throw new RuntimeException("Label number is out of bounds.");
+                    } else {
+                        throw new LogicException(sprintf("Unknown error.(%d)", $errcode));
+                    }
+                }
+                break;
+            }
+            default: {
+                if(!$this->is_integer_dtype($A->dtype())&&NDArray::bool!=$A->dtype()) {
+                        throw new InvalidArgumentException("Unsupported data type.");
+                }
+                $pDataX = $X->addr($offsetX);
+                $pDataA = $A->addr($offsetA);
+                $pDataB = $B->addr($offsetB);
+                $pParamShape = $paramShape->addr(0);
+                $errcode = $this->ffi->rindow_matlib_i_gathernd($reverse,$addMode,$m,$n,$k,$indexDepth,$pParamShape,$A->dtype(),$pDataA,$pDataX,$pDataB);
+                if($errcode) {
+                    if($errcode == self::E_UNSUPPORTED_DATA_TYPE) {
+                        throw new InvalidArgumentException("Unsupported data type.");
+                    } else if($errcode == self::E_PERM_OUT_OF_RANGE) {
+                        throw new RuntimeException("Label number is out of bounds.");
+                    } else {
+                        throw new LogicException(sprintf("Unknown error.(%d)", $errcode));
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    /**
     */
     public function slice(
         bool $reverse,
