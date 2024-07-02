@@ -1920,28 +1920,38 @@ class Matlib
     }
 
     /**
-    *      B(n,k) := A(X(n),k)
-    */
+     * A: (batchs, m, numClass, k, len)
+     * X: (batchs, n, k)
+     * B: (batchs, m, n, k, len)
+     * B(batchs, m, n, k, len) := A(batchs, m, X(batchs, n, k), k, len)
+     */
     public function gatherb(
         bool $reverse,
         bool $addMode,
-        int $m,
-        int $n,
-        int $k,
+        int $batches, // num_batchs
+        int $m, // outer_shape
+        int $n, // broadcast_shape
+        int $k, // inner_shape
+        int $len, // detail_shape
         int $numClass,
-        Buffer $A, int $offsetA,
-        Buffer $X, int $offsetX,
-        Buffer $B, int $offsetB
-        ) : void
+        Buffer $A,
+        int $offsetA,
+        Buffer $X,
+        int $offsetX,
+        Buffer $B,
+        int $offsetB,
+    ) : void
     {
+        $this->assert_shape_parameter("m", $batches);
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_shape_parameter("k", $k);
+        $this->assert_shape_parameter("k", $len);
         $this->assert_shape_parameter("numClass", $numClass);
     
-        $this->assert_matrix_buffer_spec("A", $A, $m*$n,$k, $offsetA, $k);
-        $this->assert_vector_buffer_spec("X", $X, $m, $offsetX, 1);
-        $this->assert_matrix_buffer_spec("B", $B, $m*$n, $k, $offsetB, $k);
+        $this->assert_matrix_buffer_spec("A", $A, $batches*$m*$numClass*$k, $len, $offsetA, $len);
+        $this->assert_matrix_buffer_spec("X", $X, $batches*$n, $k, $offsetX, $k);
+        $this->assert_matrix_buffer_spec("B", $B, $batches*$m*$n*$k, $len, $offsetB, $len);
     
         // Check Buffer A and Y
         if($A->dtype()!=$B->dtype()) {
@@ -1957,7 +1967,7 @@ class Matlib
                 $pDataX = $X->addr($offsetX);
                 $pDataA = $A->addr($offsetA);
                 $pDataB = $B->addr($offsetB);
-                $errcode = $this->ffi->rindow_matlib_s_gatherb($reverse,$addMode,$m,$n,$k,$numClass,$pDataA,$pDataX,$pDataB);
+                $errcode = $this->ffi->rindow_matlib_s_gatherb($reverse,$addMode,$batches,$m,$n,$k,$len,$numClass,$pDataA,$pDataX,$pDataB);
                 if($errcode) {
                     if($errcode == self::E_UNSUPPORTED_DATA_TYPE) {
                         throw new InvalidArgumentException("Unsupported data type.");
@@ -1973,7 +1983,7 @@ class Matlib
                 $pDataX = $X->addr($offsetX);
                 $pDataA = $A->addr($offsetA);
                 $pDataB = $B->addr($offsetB);
-                $errcode = $this->ffi->rindow_matlib_d_gatherb($reverse,$addMode,$m,$n,$k,$numClass,$pDataA,$pDataX,$pDataB);
+                $errcode = $this->ffi->rindow_matlib_d_gatherb($reverse,$addMode,$batches,$m,$n,$k,$len,$numClass,$pDataA,$pDataX,$pDataB);
                 if($errcode) {
                     if($errcode == self::E_UNSUPPORTED_DATA_TYPE) {
                         throw new InvalidArgumentException("Unsupported data type.");
@@ -1992,7 +2002,7 @@ class Matlib
                 $pDataX = $X->addr($offsetX);
                 $pDataA = $A->addr($offsetA);
                 $pDataB = $B->addr($offsetB);
-                $errcode = $this->ffi->rindow_matlib_i_gatherb($reverse,$addMode,$m,$n,$k,$numClass,$A->dtype(),$pDataA,$pDataX,$pDataB);
+                $errcode = $this->ffi->rindow_matlib_i_gatherb($reverse,$addMode,$batches,$m,$n,$k,$len,$numClass,$A->dtype(),$pDataA,$pDataX,$pDataB);
                 if($errcode) {
                     if($errcode == self::E_UNSUPPORTED_DATA_TYPE) {
                         throw new InvalidArgumentException("Unsupported data type.");
@@ -2008,6 +2018,9 @@ class Matlib
     }
 
     /**
+     * This function is unofficial.
+     * It may be removed or changed without notice.
+     * 
      * A: (m, (paramShape), k)
      * X: (m, n, index_depth)
      * B: (m, n, k)
@@ -2031,8 +2044,12 @@ class Matlib
         $this->assert_shape_parameter("k", $k);
         $this->assert_shape_parameter("indexDepth", $indexDepth);
 
-        $this->assert_matrix_buffer_spec("A", $A, $m*$n,$k, $offsetA, $k);
-        $this->assert_vector_buffer_spec("X", $X, $m, $offsetX, 1);
+        $paramSize = 1;
+        for($i=0;$i<$indexDepth;$i++) {
+            $paramSize *= $paramShape[$i];
+        }
+        $this->assert_matrix_buffer_spec("A", $A, $m*$paramSize, $k, $offsetA, $k);
+        $this->assert_matrix_buffer_spec("X", $X, $m, $n, $offsetX, $n);
         $this->assert_matrix_buffer_spec("B", $B, $m*$n, $k, $offsetB, $k);
         if(count($paramShape)<$indexDepth) {
             throw new InvalidArgumentException("Buffer paramShape is too small for indexDepth.");

@@ -1090,6 +1090,7 @@ class MatlibTest extends TestCase
         }
     }
 
+/*
     public function translate_gatherb(
         NDArray $A,
         NDArray $X,
@@ -1174,7 +1175,7 @@ class MatlibTest extends TestCase
         }
         return $this->translate_gatherb($output,$X,$axis,$A,$reverse);
     }
-
+*/
     public function doGatherND(
         bool $reverse,
         bool $addMode,
@@ -1290,6 +1291,267 @@ class MatlibTest extends TestCase
             $batchDims,
             $updates,
         );
+    }
+
+    /**
+     * params:  (m, n, k)
+     * indices: (m, n, index_depth)
+     * outputs: (m, (indices(m,n)), k)
+     */
+    public function translate_scatterNDAdd(
+        NDarray $indices,
+        NDArray $updates,
+        array $shape,
+        int $batchDims=null,
+        NDArray $outputs=null,
+    ) : array
+    {
+        if($outputs==null) {
+            $outputs = $this->zeros($shape,$updates->dtype());
+        }
+        
+        return $this->doGatherND(
+            $reverse=true,
+            $addMode=true,
+            $outputs,
+            $indices,
+            $batchDims,
+            $updates,
+        );
+    }
+
+    /**
+     * params:  (batches, m, numClass, k, len)
+     * indices: (batches, n, k)
+     * outputs: (batches, m, n, k, len)
+     * outputs(batches, m, n, k, len) := A(batches, m, X(batches, n, k), k, len)
+     */
+    public function doGatherb(
+        bool $reverse,
+        bool $addMode,
+        NDArray $A,
+        NDarray $X,
+        int $axis=null,
+        int $batchDims=null,
+        int $detailDepth=null,
+        int $indexDepth=null,
+        NDArray $B=null,
+    ) : array {
+        $batchDims ??= 0;
+        if($batchDims<0) {
+            $batchDims += $A->ndim();
+        }
+        if($batchDims>=$A->ndim()) {
+            throw new InvalidArgumentException(
+                "batchDims ($batchDims) must be less than to ndims of A (".$A->ndim().")"
+            );
+        }
+        $axis ??= $batchDims;
+        if($axis<0) {
+            $axis += $A->ndim();
+        }
+        if($axis>=$A->ndim()) {
+            throw new InvalidArgumentException(
+                "axis ($axis) must be less than to ndims of A (".$A->ndim().")"
+            );
+        }
+        $detailDepth ??= $axis+1;
+        $indexDepth ??= $X->ndim();
+        if($batchDims>$axis) {
+            if($axis==0) {
+                $batchDims = 0;
+            } else {
+                throw new InvalidArgumentException("batchDims ($batchDims) must be less than or equal to axis ($axis)");
+            }
+        }
+
+        //echo "params  sh: ".$this->printableShapes($A->shape())."\n";
+        //echo "indices sh: ".$this->printableShapes($X->shape())."\n";
+        //echo "batchDims: ".$batchDims."\n";
+        // A
+        $batchShape = $A->shape();
+        $outerShape = array_splice($batchShape, $batchDims);
+        $innerShape = array_splice($outerShape, $axis-$batchDims);
+        $numClass = array_shift($innerShape);
+        $detailShape = array_splice($innerShape, $detailDepth-1-$axis);
+        // X
+        $batchShapeX = $X->shape();
+        $indexShape = array_splice($batchShapeX, $batchDims);
+        $innerShapeX = array_splice($indexShape, $indexDepth-$batchDims);
+
+        //echo "==========\n";
+        //echo "params:     ".$this->printableShapes($A->shape())."\n";
+        //echo "indices:    ".$this->printableShapes($X->shape())."\n";
+        //echo "batchDims:  $batchDims\n";
+        //echo "axis:       $axis\n";
+        //echo "detailDepth:$detailDepth\n";
+        //echo "indexDepth: $indexDepth\n";
+        //echo "==params==\n";
+        //echo "batchShape: ".$this->printableShapes($batchShape)."\n";
+        //echo "outerShape: ".$this->printableShapes($outerShape)."\n";
+        //echo "numClass:   ".$numClass."\n";
+        //echo "innerShape: ".$this->printableShapes($innerShape)."\n";
+        //echo "detailShape: ".$this->printableShapes($detailShape)."\n";
+        //echo "==indices==\n";
+        //echo "batchShape: ".$this->printableShapes($batchShapeX)."\n";
+        //echo "indexShape: ".$this->printableShapes($indexShape)."\n";
+        //echo "innerShape: ".$this->printableShapes($innerShapeX)."\n";
+        if($batchShape!=$batchShapeX) {
+            throw new InvalidArgumentException(
+                "Unmatch batch shape of params and indices: ".
+                $this->printableShapes($batchShape).",".
+                $this->printableShapes($batchShapeX).","
+            );
+        }
+        if($innerShape!=$innerShapeX) {
+            throw new InvalidArgumentException(
+                "Unmatch inner shape of params and indices: ".
+                "param's inner shape is ".$this->printableShapes($innerShape).",".
+                "index's inner shape is ".$this->printableShapes($innerShapeX).","
+            );
+        }
+
+        $batches = array_product($batchShape);
+        $m = array_product($outerShape);
+        $n = array_product($indexShape);
+        $k = array_product($innerShape);
+        $len = array_product($detailShape);
+        $outputShape = array_merge($batchShape, $outerShape, $indexShape, $innerShape, $detailShape);
+        //echo "==outputs==\n";
+        //echo "outputShape: ".$this->printableShapes($outputShape)."\n";
+        //echo "batches=$batches,m=$m,n=$n,k=$k,len=$len,numClass=$numClass\n";
+        if($B==null) {
+            $B = $this->zeros($this->alloc($outputShape, dtype:$A->dtype()));
+        } else {
+            if($B->shape()!=$outputShape) {
+                $expects = $this->printableShapes($outputShape);
+                $gives = $this->printableShapes($B->shape());
+                if($reverse) {
+                    $msg = "Unmatch updates shape: expects {$expects}, but gives {$gives}";
+                } else {
+                    $msg = "Unmatch output shape: expects {$expects}, but gives {$gives}";
+                }
+                throw new InvalidArgumentException($msg);
+            }
+        }
+        $AA = $A->buffer();
+        $offsetA = $A->offset();
+        $XX = $X->buffer();
+        $offsetX = $X->offset();
+        $BB = $B->buffer();
+        $offsetB = $B->offset();
+        return [
+            $reverse,
+            $addMode,
+            $batches,
+            $m,
+            $n,
+            $k,
+            $len,
+            $numClass,
+            $AA,
+            $offsetA,
+            $XX,
+            $offsetX,
+            $BB,
+            $offsetB,
+        ];
+    }
+
+    /**
+     * params: (batches, m, numClass, k, len)
+     * indices: (batches, n, k)
+     * outputs: (batches, m, n, k, len)
+     * outputs(batches, m, n, k, len) := A(batches, m, X(batches, n, k), k, len)
+     */
+    public function translate_gatherb(
+        NDArray $params,
+        NDarray $indices,
+        int $axis=null,
+        int $batchDims=null,
+        int $detailDepth=null,
+        int $indexDepth=null,
+        NDArray $outputs=null,
+    ) : array {
+        return $this->doGatherb(
+            $reverse=false,
+            $addMode=false,
+            $params,
+            $indices,
+            $axis,
+            $batchDims,
+            $detailDepth,
+            $indexDepth,
+            $outputs,
+        );
+    }
+
+    /**
+     * indices: (batches, n, k)
+     * updates: (batches, m, n, k, len)
+     * outputs: (batches, m, numClass, k, len)
+     * outputs(batches, m, n, k, len) := A(batches, m, X(batches, n, k), k, len)
+    */
+    public function translate_scatterb(
+        NDarray $indices,
+        NDArray $updates,
+        array $shape,
+        int $axis=null,
+        int $batchDims=null,
+        int $detailDepth=null,
+        int $indexDepth=null,
+        NDArray $outputs=null,
+    ): array
+    {
+        if($outputs==null) {
+            $outputs = $this->zeros($this->alloc($shape,$updates->dtype()));
+        }
+        return $this->doGatherb(
+            $reverse=true,
+            $addMode=false,
+            $outputs,
+            $indices,
+            $axis,
+            $batchDims,
+            $detailDepth,
+            $indexDepth,
+            $updates,
+        );
+        //return $outputs;
+    }
+
+    /**
+     * indices: (batches, n, k)
+     * updates: (batches, m, n, k, len)
+     * outputs: (batches, m, numClass, k, len)
+     * outputs(batches, m, n, k, len) := A(batches, m, X(batches, n, k), k, len)
+    */
+    public function translate_scatterbAdd(
+        NDarray $indices,
+        NDArray $updates,
+        array $shape,
+        int $axis=null,
+        int $batchDims=null,
+        int $detailDepth=null,
+        int $indexDepth=null,
+        NDArray $outputs=null,
+    ) : array
+    {
+        if($outputs==null) {
+            $outputs = $this->zeros($this->alloc($shape,$updates->dtype()));
+        }
+        return $this->doGatherb(
+            $reverse=true,
+            $addMode=true,
+            $outputs,
+            $indices,
+            $axis,
+            $batchDims,
+            $detailDepth,
+            $indexDepth,
+            $updates,
+        );
+        //return $outputs;
     }
 
     public function translate_slice(
@@ -8543,7 +8805,7 @@ class MatlibTest extends TestCase
         $this->expectExceptionMessage('Matrix B specification too large for buffer.');
         $matlib->reduceGather($reverse,$addMode,$m,$n,$numClass,$XX,$offX,$AA,$offA,$BB,$offB);
     }
-
+/*
     public function testGatherbNormal()
     {
         $matlib = $this->getMatlib();
@@ -8634,6 +8896,706 @@ class MatlibTest extends TestCase
         $trues = $this->array([[[3,3],[13,13]],[[4,4],[14,14]],[[2,2],[12,12]],[[1,1],[11,11]]]);
         $this->assertEquals($trues->toArray(),$b->toArray());
     }
+*/
+    public function testGatherbNormal()
+    {
+        $matlib = $this->getMatlib();
+
+        // axis = 0
+        // A:   1D [numClass]
+        // X:   1D [n]
+        // res: 1D [n]
+        $shapeA = [4];
+        $a = $this->array(range(0,array_product($shapeA)-1))->reshape($shapeA);
+        $x = $this->array([2,2,1],dtype:NDArray::int32);
+        $b = $this->zeros([3]);
+        $matlib->gatherb(...$this->translate_gatherb($a,$x,outputs:$b));
+        $this->assertEquals([4],$a->shape());
+        $this->assertEquals([3],$x->shape());
+        $this->assertEquals([3],$b->shape()); // reduction axis1
+        $trues = $this->array([2,2,1]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+        
+        // batchDims = 1
+        // axis = 1
+        // A:   2D [batches,numClass]
+        // X:   1D [batches]
+        // res: 2D [batches]
+        $shapeA = [4,3];
+        $a = $this->array(range(0,array_product($shapeA)-1))->reshape($shapeA);
+        $x = $this->array([2,2,1,0],dtype:NDArray::int32);
+        $b = $this->zeros([4]);
+        $matlib->gatherb(...$this->translate_gatherb($a,$x,axis:1,batchDims:1,outputs:$b));
+        $this->assertEquals([4,3],$a->shape());
+        $this->assertEquals([4],$x->shape());
+        $this->assertEquals([4],$b->shape()); // reduction axis1
+        $trues = $this->array([2,5,7,9]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 1
+        // A:   3D [bathces,numClass,len]
+        // X:   1D [bathces]
+        // res: 2D [bathces,len]
+        $shapeA = [4,3,2];
+        $a = $this->array(range(0,array_product($shapeA)-1))->reshape($shapeA);
+        $x = $this->array([2,2,1,0],dtype:NDArray::int32);
+        $b = $this->zeros([4,2]);
+        $matlib->gatherb(...$this->translate_gatherb($a,$x,axis:1,batchDims:1,outputs:$b));
+        $this->assertEquals([4,3,2],$a->shape());
+        $this->assertEquals([4],$x->shape());
+        $this->assertEquals([4,2],$b->shape()); // reduction axis1
+        $trues = $this->array([
+            [4,5],
+            [10,11],
+            [14,15],
+            [18,19],
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // for argmax
+        // batchDims = 1    // batchDims=axis
+        // axis = 1         // default: axis=batchDims
+        // detailDepth = 3  // detailDepth=params->ndim()
+        // indexDepth = 1   // indexDepth=batchDims
+        // A:   2D [batches,numClass,k]
+        // X:   2D [batches,k]
+        // res: 2D [batches,k]
+        $shapeA = [3,2,4];
+        $a = $this->array(range(0,array_product($shapeA)-1))->reshape($shapeA);
+        $x = $this->array([
+            [1,1,1,1],
+            [1,1,1,1],
+            [1,1,1,1],
+        ],dtype:NDArray::int32);
+        $b = $this->zeros([3,4]);
+        $matlib->gatherb(...$this->translate_gatherb($a,$x,batchDims:1,detailDepth:$a->ndim(),indexDepth:1,outputs:$b));
+        $this->assertEquals([3,2,4],$a->shape());
+        $this->assertEquals([3,4],$x->shape());
+        $this->assertEquals([3,4],$b->shape()); // reduction axis1
+        $trues = $this->array([
+            [ 4, 5, 6, 7],
+            [12,13,14,15],
+            [20,21,22,23],
+        ]);
+        //echo $mo->toString($b,null,true)."\n";
+        //$max = $la->reduceMax($a,axis:1);
+        //echo $mo->toString($max,null,true)."\n";
+        //$max = $la->reduceArgMax($a,axis:1);
+        //echo $mo->toString($max,null,true)."\n";
+        //$this->assertEquals($max->toArray(),$x->toArray());
+        //$max = $la->reduceMax($a,axis:1);
+        //echo $mo->toString($max,null,true)."\n";
+        //$this->assertEquals($max->toArray(),$trues->toArray());
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 2
+        // A:   3D [batches,m,numClass]
+        // X:   1D [batches]
+        // res: 2D [batches,m]
+        $shapeA = [4,2,3];
+        $a = $this->array(range(0,array_product($shapeA)-1))->reshape($shapeA);
+        $x = $this->array([2,2,1,0],dtype:NDArray::int32);
+        $b = $this->zeros([4,2]);
+        $matlib->gatherb(...$this->translate_gatherb($a,$x,axis:2,batchDims:1,outputs:$b));
+        $this->assertEquals([4,2,3],$a->shape());
+        $this->assertEquals([4],$x->shape());
+        $this->assertEquals([4,2],$b->shape()); // reduction axis1
+        $trues = $this->array([
+            [ 2, 5],
+            [ 8,11],
+            [13,16],
+            [18,21],
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 2
+        // A:   4D [batches,m,numClass,len]
+        // X:   1D [batches]
+        // res: 3D [batches,m,len]
+        $shapeA = [4,2,3,2];
+        $a = $this->array(range(0,array_product($shapeA)-1))->reshape($shapeA);
+        $x = $this->array([2,2,1,0],dtype:NDArray::int32);
+        $b = $this->zeros([4,2,2]);
+        $matlib->gatherb(...$this->translate_gatherb($a,$x,axis:2,batchDims:1,outputs:$b));
+        $this->assertEquals([4,2,3,2],$a->shape());
+        $this->assertEquals([4],$x->shape());
+        $this->assertEquals([4,2,2],$b->shape()); // reduction axis1
+        $trues = $this->array([
+            [[ 4, 5],[10,11]],
+            [[16,17],[22,23]],
+            [[26,27],[32,33]],
+            [[36,37],[42,43]],
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 1
+        // A:   2D [batches,numClass]
+        // X:   2D [batches,n]
+        // res: 2D [batches,n]
+        $shapeA = [4,3];
+        $a = $this->array(range(0,array_product($shapeA)-1))->reshape($shapeA);
+        $x = $this->array([
+            [0,1],
+            [1,0],
+            [2,2],
+            [1,0]
+        ],dtype:NDArray::int32);
+        $b = $this->zeros([4,2]);
+        $matlib->gatherb(...$this->translate_gatherb($a,$x,axis:1,batchDims:1,outputs:$b));
+        $this->assertEquals([4,3],$a->shape());
+        $this->assertEquals([4,2],$x->shape());
+        $this->assertEquals([4,2],$b->shape()); // reduction axis1
+        $trues = $this->array([
+            [0,1],
+            [4,3],
+            [8,8],
+            [10,9]
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 1
+        // detailDepth = 3
+        // indexDepth = 2
+        // A:   3D [batches,numClass,k]
+        // X:   3D [batches,n,k]
+        // res: 3D [batches,n,k]
+        $shapeA = [4,5,2];
+        $a = $this->array(range(0,array_product($shapeA)-1))->reshape($shapeA);
+        $x = $this->array([
+            [[0,1],[0,1],[0,1]],
+            [[1,0],[1,0],[1,0]],
+            [[2,2],[2,2],[2,2]],
+            [[1,0],[1,0],[1,0]]
+        ],dtype:NDArray::int32);
+        $b = $this->zeros([4,3,2]);
+        $matlib->gatherb(...$this->translate_gatherb($a,$x,axis:1,batchDims:1,detailDepth:3,indexDepth:2,outputs:$b));
+        $this->assertEquals([4,5,2],$a->shape());
+        $this->assertEquals([4,3,2],$x->shape());
+        $this->assertEquals([4,3,2],$b->shape()); // reduction axis1
+        $trues = $this->array([
+            [[ 0, 3],[ 0, 3],[ 0, 3]],
+            [[12,11],[12,11],[12,11]],
+            [[24,25],[24,25],[24,25]],
+            [[32,31],[32,31],[32,31]]
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 1
+        // detailDepth = 3
+        // indexDepth = 2
+        // A:   4D [batches,numClass,k,len]
+        // X:   3D [batches,n,k]
+        // res: 4D [batches,n,k,len]
+        $shapeA = [4,5,2,3];
+        $a = $this->array(range(0,array_product($shapeA)-1))->reshape($shapeA);
+        $x = $this->array([
+            [[0,1],[0,1],[0,1]],
+            [[1,0],[1,0],[1,0]],
+            [[2,2],[2,2],[2,2]],
+            [[1,0],[1,0],[1,0]],
+        ],dtype:NDArray::int32);
+        $b = $this->zeros([4,3,2,3]);
+        $matlib->gatherb(...$this->translate_gatherb($a,$x,axis:1,batchDims:1,detailDepth:3,indexDepth:2,outputs:$b));
+        $this->assertEquals([4,5,2,3],$a->shape());
+        $this->assertEquals([4,3,2],$x->shape());
+        $this->assertEquals([4,3,2,3],$b->shape()); // reduction axis1
+        $trues = $this->array([
+            [[[ 0, 1, 2],[ 9,10,11]],
+             [[ 0, 1, 2],[ 9,10,11]],
+             [[ 0, 1, 2],[ 9,10,11]],],
+            [[[36,37,38],[33,34,35]],
+             [[36,37,38],[33,34,35]],
+             [[36,37,38],[33,34,35]],],
+            [[[72,73,74],[75,76,77]],
+             [[72,73,74],[75,76,77]],
+             [[72,73,74],[75,76,77]],],
+            [[[96,97,98],[93,94,95]],
+             [[96,97,98],[93,94,95]],
+             [[96,97,98],[93,94,95]],]
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 2
+        // detailDepth = 4
+        // indexDepth = 2
+        // A:   5D [batches,m,numClass,k,len]
+        // X:   3D [batches,n,k]
+        // res: 5D [batches,m,n,k,len]
+        $shapeA = [4,2,5,2,3];
+        $a = $this->array(range(0,array_product($shapeA)-1))->reshape($shapeA);
+        $x = $this->array([
+            [[0,1],[0,1],[0,1]],
+            [[1,0],[1,0],[1,0]],
+            [[2,2],[2,2],[2,2]],
+            [[1,0],[1,0],[1,0]],
+        ],dtype:NDArray::int32);
+        $b = $this->zeros([4,2,3,2,3]);
+        $matlib->gatherb(...$this->translate_gatherb($a,$x,axis:2,batchDims:1,detailDepth:4,indexDepth:2,outputs:$b));
+        $this->assertEquals([4,2,5,2,3],$a->shape());
+        $this->assertEquals([4,3,2],$x->shape());
+        $this->assertEquals([4,2,3,2,3],$b->shape()); // reduction axis1
+        $trues = $this->array([
+            [[[[ 0, 1, 2],[ 9,10,11]],
+              [[ 0, 1, 2],[ 9,10,11]],
+              [[ 0, 1, 2],[ 9,10,11]]],
+             [[[30,31,32],[39,40,41]],
+              [[30,31,32],[39,40,41]],
+              [[30,31,32],[39,40,41]]]],
+            [[[[66,67,68],[63,64,65]],
+              [[66,67,68],[63,64,65]],
+              [[66,67,68],[63,64,65]]],
+             [[[96,97,98],[93,94,95]],
+              [[96,97,98],[93,94,95]],
+              [[96,97,98],[93,94,95]]]],
+            [[[[132,133,134],[135,136,137]],
+              [[132,133,134],[135,136,137]],
+              [[132,133,134],[135,136,137]]],
+             [[[162,163,164],[165,166,167]],
+              [[162,163,164],[165,166,167]],
+              [[162,163,164],[165,166,167]]]],
+            [[[[186,187,188],[183,184,185]],
+              [[186,187,188],[183,184,185]],
+              [[186,187,188],[183,184,185]]],
+             [[[216,217,218],[213,214,215]],
+              [[216,217,218],[213,214,215]],
+              [[216,217,218],[213,214,215]]]]
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+    }
+
+    public function testScatterbNormal()
+    {
+        $matlib = $this->getMatlib();
+
+        // axis = 0
+        // A:   1D [n]
+        // X:   1D [n]
+        // res: 1D [numClass]
+        $shapeA = [3];
+        $a = $this->array([2,2,1]);
+        $x = $this->array([2,2,1],dtype:NDArray::int32);
+        $shapeB = [4];
+        $b = $this->zeros($shapeB);
+        $matlib->gatherb(...$this->translate_scatterb($x,$a,$shapeB,outputs:$b));
+        $this->assertEquals([3],$a->shape());
+        $this->assertEquals([3],$x->shape());
+        $this->assertEquals([4],$b->shape());
+        $trues = $this->array([0,1,2,0]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+        
+        // batchDims = 1
+        // axis = 1
+        // A:   2D [batches]
+        // X:   1D [batches]
+        // res: 2D [batches,numClass]
+        $shapeA = [4];
+        $a = $this->array([2,5,7,9]);
+        $x = $this->array([2,2,1,0],dtype:NDArray::int32);
+        $shapeB = [4,3];
+        $b = $this->zeros($shapeB);
+        $matlib->gatherb(...$this->translate_scatterb($x,$a,$shapeB,axis:1,batchDims:1,outputs:$b));
+        $this->assertEquals([4],$a->shape());
+        $this->assertEquals([4],$x->shape());
+        $this->assertEquals([4,3],$b->shape());
+        $trues = $this->array([
+            [0,0,2],
+            [0,0,5],
+            [0,7,0],
+            [9,0,0]
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 1
+        // A:   2D [bathces,len]
+        // X:   1D [bathces]
+        // res: 3D [bathces,numClass,len]
+        $shapeA = [4,2];
+        $a = $this->array([
+            [4,5],
+            [10,11],
+            [14,15],
+            [18,19]
+        ]);
+        $x = $this->array([2,2,1,0],dtype:NDArray::int32);
+        $shapeB = [4,3,2];
+        $b = $this->zeros($shapeB);
+        $matlib->gatherb(...$this->translate_scatterb($x,$a,$shapeB,axis:1,batchDims:1,outputs:$b));
+        $this->assertEquals([4,2],$a->shape());
+        $this->assertEquals([4],$x->shape());
+        $this->assertEquals([4,3,2],$b->shape());
+        $trues = $this->array([
+            [[0,0],[0,0],[4,5]],
+            [[0,0],[0,0],[10,11]],
+            [[0,0],[14,15],[0,0]],
+            [[18,19],[0,0],[0,0]]
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // for argmax
+        // batchDims = 1    // batchDims=axis
+        // axis = 1         // default: axis=batchDims
+        // detailDepth = 3  // detailDepth=params->ndim()
+        // indexDepth = 1   // indexDepth=batchDims
+        // A:   2D [batches,k]
+        // X:   2D [batches,k]
+        // res: 2D [batches,numClass,k]
+        $shapeA = [3,4];
+        $a = $this->array([
+            [ 4, 5, 6, 7],
+            [12,13,14,15],
+            [20,21,22,23]
+        ]);
+        $x = $this->array([
+            [1,1,1,1],
+            [1,1,1,1],
+            [1,1,1,1],
+        ],dtype:NDArray::int32);
+        $shapeB = [3,2,4];
+        $b = $this->zeros($shapeB);
+        $matlib->gatherb(...$this->translate_scatterb($x,$a,$shapeB,batchDims:1,detailDepth:count($shapeB),indexDepth:1,outputs:$b));
+        $this->assertEquals([3,4],$a->shape());
+        $this->assertEquals([3,4],$x->shape());
+        $this->assertEquals([3,2,4],$b->shape());
+        $trues = $this->array([
+            [[0,0,0,0],[4,5,6,7]],
+            [[0,0,0,0],[12,13,14,15]],
+            [[0,0,0,0],[20,21,22,23]],
+        ]);
+        //echo $mo->toString($b,null,true)."\n";
+        $this->assertEquals($trues->toArray(),$b->toArray());
+        //$sourceDataShape = [3,2,4];
+        //$sourceData = $this->array(range(0,array_product($sourceDataShape)-1))->reshape($sourceDataShape);
+        //$max = $la->reduceMax($sourceData,axis:1);
+        ////echo $mo->toString($max,null,true)."\n";
+        //$imax = $la->reduceArgMax($sourceData,axis:1);
+        ////echo $mo->toString($max,null,true)."\n";
+        //$this->assertEquals($imax->toArray(),$x->toArray());
+        //$d = $la->scatterb($imax,$max,$shapeB,batchDims:1,detailDepth:count($shapeB),indexDepth:1);
+        ////echo $mo->toString($max,null,true)."\n";
+        //$this->assertEquals($d->toArray(),$trues->toArray());
+
+        // batchDims = 1
+        // axis = 2
+        // A:   2D [batches,m]
+        // X:   1D [batches]
+        // res: 3D [batches,m,numClass]
+        $shapeA = [4,2,3];
+        $a = $this->array([
+            [ 2, 5],
+            [ 8,11],
+            [13,16],
+            [18,21],
+        ]);
+        $x = $this->array([2,2,1,0],dtype:NDArray::int32);
+        $shapeB = [4,2,3];
+        $b = $this->zeros($shapeB);
+        $matlib->gatherb(...$this->translate_scatterb($x,$a,$shapeB,axis:2,batchDims:1,outputs:$b));
+        $this->assertEquals([4,2],$a->shape());
+        $this->assertEquals([4],$x->shape());
+        $this->assertEquals([4,2,3],$b->shape());
+        $trues = $this->array([
+            [[0,0,2],[0,0,5]],
+            [[0,0,8],[0,0,11]],
+            [[0,13,0],[0,16,0]],
+            [[18,0,0],[21,0,0]],
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 2
+        // A:   3D [batches,m,len]
+        // X:   1D [batches]
+        // res: 4D [batches,m,numClass,len]
+        $shapeA = [4,2,3,2];
+        $a = $this->array([
+            [[ 4, 5],[10,11]],
+            [[16,17],[22,23]],
+            [[26,27],[32,33]],
+            [[36,37],[42,43]],
+        ]);
+        $x = $this->array([2,2,1,0],dtype:NDArray::int32);
+        $shapeB = [4,2,3,2];
+        $b = $this->zeros($shapeB);
+        $matlib->gatherb(...$this->translate_scatterb($x,$a,$shapeB,axis:2,batchDims:1,outputs:$b));
+        $this->assertEquals([4,2,2],$a->shape());
+        $this->assertEquals([4],$x->shape());
+        $this->assertEquals([4,2,3,2],$b->shape());
+        $trues = $this->array([
+            [[[0,0],[0,0],[4,5]],  [[0,0],[0,0],[10,11]]],
+            [[[0,0],[0,0],[16,17]],[[0,0],[0,0],[22,23]]],
+            [[[0,0],[26,27],[0,0]],[[0,0],[32,33],[0,0]]],
+            [[[36,37],[0,0],[0,0]],[[42,43],[0,0],[0,0]]],
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 1
+        // A:   2D [batches,n]
+        // X:   2D [batches,n]
+        // res: 2D [batches,numClass]
+        $shapeA = [4,2];
+        $a = $this->array([
+            [0,1],
+            [4,3],
+            [8,8],
+            [10,9]
+        ]);
+        $x = $this->array([
+            [0,1],
+            [1,0],
+            [2,2],
+            [1,0]
+        ],dtype:NDArray::int32);
+        $shapeB = [4,3];
+        $b = $this->zeros($shapeB);
+        $matlib->gatherb(...$this->translate_scatterb($x,$a,$shapeB,axis:1,batchDims:1,outputs:$b));
+        $this->assertEquals([4,2],$a->shape());
+        $this->assertEquals([4,2],$x->shape());
+        $this->assertEquals([4,3],$b->shape());
+        $trues = $this->array([
+            [0,1,0],
+            [3,4,0],
+            [0,0,8],
+            [9,10,0]
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 1
+        // detailDepth = 3
+        // indexDepth = 2
+        // A:   3D [batches,n,k]
+        // X:   3D [batches,n,k]
+        // res: 3D [batches,numClass,k]
+        $shapeA = [4,3,2];
+        $a = $this->array([
+            [[ 0, 3],[ 0, 3],[ 0, 3]],
+            [[12,11],[12,11],[12,11]],
+            [[24,25],[24,25],[24,25]],
+            [[32,31],[32,31],[32,31]]
+        ]);
+        $x = $this->array([
+            [[0,1],[0,1],[0,1]],
+            [[1,0],[1,0],[1,0]],
+            [[2,2],[2,2],[2,2]],
+            [[1,0],[1,0],[1,0]]
+        ],dtype:NDArray::int32);
+        $shapeB = [4,5,2];
+        $b = $this->zeros($shapeB);
+        $matlib->gatherb(...$this->translate_scatterb($x,$a,$shapeB,axis:1,batchDims:1,detailDepth:3,indexDepth:2,outputs:$b));
+        $this->assertEquals([4,3,2],$a->shape());
+        $this->assertEquals([4,3,2],$x->shape());
+        $this->assertEquals([4,5,2],$b->shape());
+        $trues = $this->array([
+            [[0,0], [0,3], [0,0],  [0,0],[0,0]],
+            [[0,11],[12,0],[0,0],  [0,0],[0,0]],
+            [[0,0], [0,0], [24,25],[0,0],[0,0]],
+            [[0,31],[32,0],[0,0],  [0,0],[0,0]]
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 1
+        // detailDepth = 3
+        // indexDepth = 2
+        // res: 4D [batches,n,k,len]
+        // X:   3D [batches,n,k]
+        // A:   4D [batches,numClass,k,len]
+        $shapeA = [4,3,2,3];
+        $a = $this->array([
+            [[[ 0, 1, 2],[ 9,10,11]],
+             [[ 0, 1, 2],[ 9,10,11]],
+             [[ 0, 1, 2],[ 9,10,11]],],
+            [[[36,37,38],[33,34,35]],
+             [[36,37,38],[33,34,35]],
+             [[36,37,38],[33,34,35]],],
+            [[[72,73,74],[75,76,77]],
+             [[72,73,74],[75,76,77]],
+             [[72,73,74],[75,76,77]],],
+            [[[96,97,98],[93,94,95]],
+             [[96,97,98],[93,94,95]],
+             [[96,97,98],[93,94,95]],]
+        ]);
+        $x = $this->array([
+            [[0,1],[0,1],[0,1]],
+            [[1,0],[1,0],[1,0]],
+            [[2,2],[2,2],[2,2]],
+            [[1,0],[1,0],[1,0]],
+        ],dtype:NDArray::int32);
+        $shapeB = [4,5,2,3];
+        $b = $this->zeros($shapeB);
+        $matlib->gatherb(...$this->translate_scatterb($x,$a,$shapeB,axis:1,batchDims:1,detailDepth:3,indexDepth:2,outputs:$b));
+        $this->assertEquals([4,3,2,3],$a->shape());
+        $this->assertEquals([4,3,2],$x->shape());
+        $this->assertEquals([4,5,2,3],$b->shape());
+        $trues = $this->array([
+            [[[0,1,2],   [0,0,0]],
+             [[0,0,0],   [9,10,11]],
+             [[0,0,0],   [0,0,0]],
+             [[0,0,0],   [0,0,0]],
+             [[0,0,0],   [0,0,0]]],
+            [[[0,0,0],   [33,34,35]],
+             [[36,37,38],[0,0,0]],
+             [[0,0,0],   [0,0,0]],
+             [[0,0,0],   [0,0,0]],
+             [[0,0,0],   [0,0,0]]],
+            [[[0,0,0],   [0,0,0]],
+             [[0,0,0],   [0,0,0]],
+             [[72,73,74],[75,76,77]],
+             [[0,0,0],   [0,0,0]],
+             [[0,0,0],   [0,0,0]]],
+            [[[0,0,0],   [93,94,95]],
+             [[96,97,98],[0,0,0]],
+             [[0,0,0],   [0,0,0]],
+             [[0,0,0],   [0,0,0]],
+             [[0,0,0],   [0,0,0]]],
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // batchDims = 1
+        // axis = 2
+        // detailDepth = 4
+        // indexDepth = 2
+        // A:   5D [batches,m,n,k,len]
+        // X:   3D [batches,n,k]
+        // res: 5D [batches,m,numClass,k,len]
+        $shapeA = [4,2,3,2,3];
+        $a = $this->array([
+            [[[[ 0, 1, 2],[ 9,10,11]],
+              [[ 0, 1, 2],[ 9,10,11]],
+              [[ 0, 1, 2],[ 9,10,11]]],
+             [[[30,31,32],[39,40,41]],
+              [[30,31,32],[39,40,41]],
+              [[30,31,32],[39,40,41]]]],
+            [[[[66,67,68],[63,64,65]],
+              [[66,67,68],[63,64,65]],
+              [[66,67,68],[63,64,65]]],
+             [[[96,97,98],[93,94,95]],
+              [[96,97,98],[93,94,95]],
+              [[96,97,98],[93,94,95]]]],
+            [[[[132,133,134],[135,136,137]],
+              [[132,133,134],[135,136,137]],
+              [[132,133,134],[135,136,137]]],
+             [[[162,163,164],[165,166,167]],
+              [[162,163,164],[165,166,167]],
+              [[162,163,164],[165,166,167]]]],
+            [[[[186,187,188],[183,184,185]],
+              [[186,187,188],[183,184,185]],
+              [[186,187,188],[183,184,185]]],
+             [[[216,217,218],[213,214,215]],
+              [[216,217,218],[213,214,215]],
+              [[216,217,218],[213,214,215]]]]
+        ]);
+        $x = $this->array([
+            [[0,1],[0,1],[0,1]],
+            [[1,0],[1,0],[1,0]],
+            [[2,2],[2,2],[2,2]],
+            [[1,0],[1,0],[1,0]],
+        ],dtype:NDArray::int32);
+        $shapeB = [4,2,5,2,3];
+        $b = $this->zeros($shapeB);
+        $matlib->gatherb(...$this->translate_scatterb($x,$a,$shapeB,axis:2,batchDims:1,detailDepth:4,indexDepth:2,outputs:$b));
+        $this->assertEquals([4,2,3,2,3],$a->shape());
+        $this->assertEquals([4,3,2],$x->shape());
+        $this->assertEquals([4,2,5,2,3],$b->shape());
+        $trues = $this->array([
+            [[[[ 0, 1, 2],[ 0, 0, 0]],
+              [[ 0, 0, 0],[ 9,10,11]],
+              [[ 0, 0, 0],[ 0, 0, 0]],
+              [[ 0, 0, 0],[ 0, 0, 0]],
+              [[ 0, 0, 0],[ 0, 0, 0]]],
+             [[[30,31,32],[ 0, 0, 0]],
+              [[ 0, 0, 0],[39,40,41]],
+              [[ 0, 0, 0],[ 0, 0, 0]],
+              [[ 0, 0, 0],[ 0, 0, 0]],
+              [[ 0, 0, 0],[ 0, 0, 0]]]],
+            [[[[ 0, 0, 0],[63,64,65]],
+              [[66,67,68],[ 0, 0, 0]],
+              [[ 0, 0, 0],[ 0, 0, 0]],
+              [[ 0, 0, 0],[ 0, 0, 0]],
+              [[ 0, 0, 0],[ 0, 0, 0]]],
+             [[[ 0, 0, 0],[93,94,95]],
+              [[96,97,98],[ 0, 0, 0]],
+              [[ 0, 0, 0],[ 0, 0, 0]],
+              [[ 0, 0, 0],[ 0, 0, 0]],
+              [[ 0, 0, 0],[ 0, 0, 0]]]],
+            [[[[  0,  0,  0],[  0,  0,  0]],
+              [[  0,  0,  0],[  0,  0,  0]],
+              [[132,133,134],[135,136,137]],
+              [[  0,  0,  0],[  0,  0,  0]],
+              [[  0,  0,  0],[  0,  0,  0]]],
+             [[[  0,  0,  0],[  0,  0,  0]],
+              [[  0,  0,  0],[  0,  0,  0]],
+              [[162,163,164],[165,166,167]],
+              [[  0,  0,  0],[  0,  0,  0]],
+              [[  0,  0,  0],[  0,  0,  0]]]],
+            [[[[  0,  0,  0],[183,184,185]],
+              [[186,187,188],[  0,  0,  0]],
+              [[  0,  0,  0],[  0,  0,  0]],
+              [[  0,  0,  0],[  0,  0,  0]],
+              [[  0,  0,  0],[  0,  0,  0]]],
+             [[[  0,  0,  0],[213,214,215]],
+              [[216,217,218],[  0,  0,  0]],
+              [[  0,  0,  0],[  0,  0,  0]],
+              [[  0,  0,  0],[  0,  0,  0]],
+              [[  0,  0,  0],[  0,  0,  0]]]]
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+    }
+
+    public function testScatterbAddNormal()
+    {
+        $matlib = $this->getMatlib();
+
+        // for Embedding backword.
+        // parallel on scatter add mode
+        // axis = 0
+        // A:   1D [n]
+        // X:   1D [n]
+        // res: 1D [numClass]
+        $shapeA = [3];
+        $a = $this->array([2,2,1]);
+        $x = $this->array([2,2,1], dtype:NDArray::int32);
+        $shapeB = [4];
+        $b = $this->zeros($shapeB);
+        $matlib->gatherb(...$this->translate_scatterbAdd($x, $a, $shapeB,outputs:$b));
+        $this->assertEquals([3], $a->shape());
+        $this->assertEquals([3], $x->shape());
+        $this->assertEquals([4], $b->shape());
+        $trues = $this->array([0,1,4,0]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+
+        // parallel on batch mode
+        // batchDims = 1
+        // axis = 1
+        // A:   2D [batches]
+        // X:   1D [batches]
+        // res: 2D [batches,numClass]
+        $shapeA = [4];
+        $a = $this->array([2,5,7,9]);
+        $x = $this->array([2,2,1,0],dtype:NDArray::int32);
+        $shapeB = [4,3];
+        $b = $this->zeros($shapeB);
+        $matlib->gatherb(...$this->translate_scatterbAdd($x,$a,$shapeB,axis:1,batchDims:1,outputs:$b));
+        $this->assertEquals([4],$a->shape());
+        $this->assertEquals([4],$x->shape());
+        $this->assertEquals([4,3],$b->shape());
+        $trues = $this->array([
+            [0,0,2],
+            [0,0,5],
+            [0,7,0],
+            [9,0,0]
+        ]);
+        $this->assertEquals($trues->toArray(),$b->toArray());
+    }
 
     public function testGatherNDNormal()
     {
@@ -8650,7 +9612,7 @@ class MatlibTest extends TestCase
             [1]
         ,dtype:NDArray::int32);
         $b = $this->zeros([]);
-        $matlib->gatherND(...$this->translate_gatherND($a,$x,batchDims:0,outputs:$b));
+        $matlib->gathernd(...$this->translate_gatherND($a,$x,batchDims:0,outputs:$b));
         $this->assertEquals([5],$a->shape());
         $this->assertEquals([1],$x->shape());
         $this->assertEquals([],$b->shape());
@@ -8670,7 +9632,7 @@ class MatlibTest extends TestCase
             [2],
         ],dtype:NDArray::int32);
         $b = $this->zeros([2]);
-        $matlib->gatherND(...$this->translate_gatherND($a,$x,batchDims:0,outputs:$b));
+        $matlib->gathernd(...$this->translate_gatherND($a,$x,batchDims:0,outputs:$b));
         $this->assertEquals([5],$a->shape());
         $this->assertEquals([2,1],$x->shape());
         $this->assertEquals([2],$b->shape());
@@ -8691,7 +9653,7 @@ class MatlibTest extends TestCase
             [2],
         ],dtype:NDArray::int32);
         $b = $this->zeros([2,2]);
-        $matlib->gatherND(...$this->translate_gatherND($a,$x,batchDims:0,outputs:$b));
+        $matlib->gathernd(...$this->translate_gatherND($a,$x,batchDims:0,outputs:$b));
         $this->assertEquals([5,2],$a->shape());
         $this->assertEquals([2,1],$x->shape());
         $this->assertEquals([2,2],$b->shape());
@@ -8712,7 +9674,7 @@ class MatlibTest extends TestCase
             [2,3],
         ],dtype:NDArray::int32);
         $b = $this->zeros([2,2]);
-        $matlib->gatherND(...$this->translate_gatherND($a,$x,batchDims:0,outputs:$b));
+        $matlib->gathernd(...$this->translate_gatherND($a,$x,batchDims:0,outputs:$b));
         $this->assertEquals([5,6,2],$a->shape());
         $this->assertEquals([2,2],$x->shape());
         $this->assertEquals([2,2],$b->shape());
@@ -8736,7 +9698,7 @@ class MatlibTest extends TestCase
             [0],
         ],dtype:NDArray::int32);
         $b = $this->zeros([4]);
-        $matlib->gatherND(...$this->translate_gatherND($a,$x,batchDims:1,outputs:$b));
+        $matlib->gathernd(...$this->translate_gatherND($a,$x,batchDims:1,outputs:$b));
         $this->assertEquals([4,5],$a->shape());
         $this->assertEquals([4,1],$x->shape());
         $this->assertEquals([4],$b->shape());
@@ -8761,7 +9723,7 @@ class MatlibTest extends TestCase
             [0],
         ],dtype:NDArray::int32);
         $b = $this->zeros([4,2]);
-        $matlib->gatherND(...$this->translate_gatherND($a,$x,batchDims:1,outputs:$b));
+        $matlib->gathernd(...$this->translate_gatherND($a,$x,batchDims:1,outputs:$b));
         $this->assertEquals([4,5,2],$a->shape());
         $this->assertEquals([4,1],$x->shape());
         $this->assertEquals([4,2],$b->shape());
@@ -8790,7 +9752,7 @@ class MatlibTest extends TestCase
              [0]],
         ],dtype:NDArray::int32);
         $b = $this->zeros([4,2,2]);
-        $matlib->gatherND(...$this->translate_gatherND($a,$x,batchDims:1,outputs:$b));
+        $matlib->gathernd(...$this->translate_gatherND($a,$x,batchDims:1,outputs:$b));
         $this->assertEquals([4,5,2],$a->shape());
         $this->assertEquals([4,2,1],$x->shape());
         $this->assertEquals([4,2,2],$b->shape());
@@ -8819,7 +9781,7 @@ class MatlibTest extends TestCase
             [[1,1],[1,1],[1,1]],
         ],dtype:NDArray::int32);
         $b = $this->zeros([4,3,2]);
-        $matlib->gatherND(...$this->translate_gatherND($a,$x,batchDims:1,outputs:$b));
+        $matlib->gathernd(...$this->translate_gatherND($a,$x,batchDims:1,outputs:$b));
         $this->assertEquals([4,5,6,2],$a->shape());
         $this->assertEquals([4,3,2],$x->shape());
         $this->assertEquals([4,3,2],$b->shape());
@@ -9055,7 +10017,7 @@ class MatlibTest extends TestCase
         ,dtype:NDArray::int32);
         $shape = [5];
         $b = $this->zeros($shape);
-        $matlib->gatherND(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:0,outputs:$b));
+        $matlib->gathernd(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:0,outputs:$b));
         $this->assertEquals([],$a->shape());
         $this->assertEquals([1],$x->shape());
         $this->assertEquals([5],$b->shape());
@@ -9079,7 +10041,7 @@ class MatlibTest extends TestCase
         ],dtype:NDArray::int32);
         $shape = [5];
         $b = $this->zeros($shape);
-        $matlib->gatherND(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:0,outputs:$b));
+        $matlib->gathernd(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:0,outputs:$b));
         $this->assertEquals([2],$a->shape());
         $this->assertEquals([2,1],$x->shape());
         $this->assertEquals([5],$b->shape());
@@ -9106,7 +10068,7 @@ class MatlibTest extends TestCase
         ],dtype:NDArray::int32);
         $shape = [5,2];
         $b = $this->zeros($shape);
-        $matlib->gatherND(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:0,outputs:$b));
+        $matlib->gathernd(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:0,outputs:$b));
         $this->assertEquals([2,2],$a->shape());
         $this->assertEquals([2,1],$x->shape());
         $this->assertEquals([5,2],$b->shape());
@@ -9133,7 +10095,7 @@ class MatlibTest extends TestCase
         ],dtype:NDArray::int32);
         $shape = [5,6,2];
         $b = $this->zeros($shape);
-        $matlib->gatherND(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:0,outputs:$b));
+        $matlib->gathernd(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:0,outputs:$b));
         $this->assertEquals([2,2],$a->shape());
         $this->assertEquals([2,2],$x->shape());
         $this->assertEquals([5,6,2],$b->shape());
@@ -9165,7 +10127,7 @@ class MatlibTest extends TestCase
         ],dtype:NDArray::int32);
         $shape = [4,5];
         $b = $this->zeros($shape);
-        $matlib->gatherND(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:1,outputs:$b));
+        $matlib->gathernd(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:1,outputs:$b));
         $this->assertEquals([4],$a->shape());
         $this->assertEquals([4,1],$x->shape());
         $this->assertEquals([4,5],$b->shape());
@@ -9195,7 +10157,7 @@ class MatlibTest extends TestCase
         ],dtype:NDArray::int32);
         $shape = [4,5,2];
         $b = $this->zeros($shape);
-        $matlib->gatherND(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:1,outputs:$b));
+        $matlib->gathernd(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:1,outputs:$b));
         $this->assertEquals([4,2],$a->shape());
         $this->assertEquals([4,1],$x->shape());
         $this->assertEquals([4,5,2],$b->shape());
@@ -9233,7 +10195,7 @@ class MatlibTest extends TestCase
         ],dtype:NDArray::int32);
         $shape = [4,5,2];
         $b = $this->zeros($shape);
-        $matlib->gatherND(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:1,outputs:$b));
+        $matlib->gathernd(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:1,outputs:$b));
         $this->assertEquals([4,2,2],$a->shape());
         $this->assertEquals([4,2,1],$x->shape());
         $this->assertEquals([4,5,2],$b->shape());
@@ -9271,7 +10233,7 @@ class MatlibTest extends TestCase
         ],dtype:NDArray::int32);
         $shape = [4,5,6,2];
         $b = $this->zeros($shape);
-        $matlib->gatherND(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:1,outputs:$b));
+        $matlib->gathernd(...$this->translate_scatterND($x,$a,shape:$shape,batchDims:1,outputs:$b));
         $this->assertEquals([4,3,2],$a->shape());
         $this->assertEquals([4,3,2],$x->shape());
         $this->assertEquals([4,5,6,2],$b->shape());
@@ -9297,6 +10259,43 @@ class MatlibTest extends TestCase
              [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],
              [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]],
         ],$b->toArray());
+    }
+
+    public function testScatterNDAddNormal()
+    {
+        $matlib = $this->getMatlib();
+
+        // axis = 0
+        // 2D indices
+        // A:   2D [n,k]
+        // X:   2D [n,depth]
+        // res: 3D [p0,p1,k]
+        $a = $this->array([
+            [1,10],
+            [2,3],
+            [30,31],
+            [1,10],
+        ]);
+        $x = $this->array([
+            [4,5],
+            [0,1],
+            [2,3],
+            [4,5],
+        ],dtype:NDArray::int32);
+        $shape = [5,6,2];
+        $b = $this->zeros($shape);
+        $matlib->gathernd(...$this->translate_scatterNDAdd($x,$a,shape:$shape,batchDims:0,outputs:$b));
+        $this->assertEquals([4,2],$a->shape());
+        $this->assertEquals([4,2],$x->shape());
+        $this->assertEquals([5,6,2],$b->shape());
+        $this->assertEquals([
+            [[0,0],[2,3],[0,0],[0,0],  [0,0],[0,0]],
+            [[0,0],[0,0],[0,0],[0,0],  [0,0],[0,0]],
+            [[0,0],[0,0],[0,0],[30,31],[0,0],[0,0]],
+            [[0,0],[0,0],[0,0],[0,0],  [0,0],[0,0]],
+            [[0,0],[0,0],[0,0],[0,0],  [0,0],[2,20]],
+        ],$b->toArray());
+
     }
 
     /**
