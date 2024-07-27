@@ -86,7 +86,7 @@ class Matlib
      */
     public function sum(
         int $n,
-        Buffer $X, int $offsetX, int $incX ) : float
+        Buffer $X, int $offsetX, int $incX ) : float|int
     {
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
@@ -2409,6 +2409,9 @@ class Matlib
         }
         if($offsetA+$m*$n*$k>$A->count()) {
             throw new InvalidArgumentException("Matrix specification too large for bufferA.");
+        }
+        if(!$this->is_integer_dtype($B->dtype())) {
+            throw new InvalidArgumentException("dtype of indices must be integer.");
         }
 
         // Check Buffer B

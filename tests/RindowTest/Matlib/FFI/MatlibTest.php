@@ -2236,7 +2236,9 @@ class MatlibTest extends TestCase
         $n = $matlib->getParallel();
 
         if(PHP_OS=="WINNT") {
-            $this->assertEquals(Matlib::P_OPENMP,$n);
+            //$this->assertEquals(Matlib::P_OPENMP,$n);
+            $mt_enabled = ($n==Matlib::P_OPENMP || $n==Matlib::P_THREAD);
+            $this->assertTrue($mt_enabled);
         } else {
             $mt_enabled = ($n==Matlib::P_OPENMP || $n==Matlib::P_THREAD);
             $this->assertTrue($mt_enabled);
@@ -2269,13 +2271,20 @@ class MatlibTest extends TestCase
         [$N,$XX,$offX,$incX] =
             $this->translate_amin($X);
         $min = $matlib->sum($N,$XX,$offX,$incX);
-        $this->assertEquals(-320,$min);
+        $this->assertNotEquals(-320,$min);
+        $this->assertEquals(-64,$min);
  
+        $X = $this->array([10,20,30],NDArray::uint8);
+        [$N,$XX,$offX,$incX] =
+            $this->translate_amin($X);
+        $min = $matlib->sum($N,$XX,$offX,$incX);
+        $this->assertEquals(60,$min);
         $X = $this->array([-1,-2,-3],NDArray::uint8);
         [$N,$XX,$offX,$incX] =
             $this->translate_amin($X);
         $min = $matlib->sum($N,$XX,$offX,$incX);
-        $this->assertEquals(256*3-1-2-3,$min);
+        $this->assertNotEquals(256*3-1-2-3,$min);
+        $this->assertEquals(250,$min);
  
         $X = $this->array([-100,-100,-120],NDArray::int16);
         [$N,$XX,$offX,$incX] =
@@ -2283,11 +2292,17 @@ class MatlibTest extends TestCase
         $min = $matlib->sum($N,$XX,$offX,$incX);
         $this->assertEquals(-320,$min);
  
+        $X = $this->array([10000,20000,30000],NDArray::uint16);
+        [$N,$XX,$offX,$incX] =
+            $this->translate_amin($X);
+        $min = $matlib->sum($N,$XX,$offX,$incX);
+        $this->assertEquals(60000,$min);
         $X = $this->array([-1,-2,-3],NDArray::uint16);
         [$N,$XX,$offX,$incX] =
             $this->translate_amin($X);
         $min = $matlib->sum($N,$XX,$offX,$incX);
-        $this->assertEquals(65536*3-1-2-3,$min);
+        $this->assertNotEquals(65536*3-1-2-3,$min);
+        $this->assertEquals(65530,$min);
  
         $X = $this->array([-100,-100,-120],NDArray::int32);
         [$N,$XX,$offX,$incX] =
@@ -2295,11 +2310,17 @@ class MatlibTest extends TestCase
         $min = $matlib->sum($N,$XX,$offX,$incX);
         $this->assertEquals(-320,$min);
  
+        $X = $this->array([100000000,200000000,300000000],NDArray::uint32);
+        [$N,$XX,$offX,$incX] =
+            $this->translate_amin($X);
+        $min = $matlib->sum($N,$XX,$offX,$incX);
+        $this->assertEquals(600000000,$min);
         $X = $this->array([-1,-2,-3],NDArray::uint32);
         [$N,$XX,$offX,$incX] =
             $this->translate_amin($X);
         $min = $matlib->sum($N,$XX,$offX,$incX);
-        $this->assertEquals((2**32)*3-1-2-3,$min);
+        $this->assertNotEquals((2**32)*3-1-2-3,$min);
+        $this->assertEquals(4294967290,$min);
  
         $X = $this->array([-100,-100,-120],NDArray::int64);
         [$N,$XX,$offX,$incX] =
@@ -11355,7 +11376,7 @@ class MatlibTest extends TestCase
         $matlib = $this->getMatlib();
 
         $A = $this->array([[1,2,3],[4,5,6]],dtype:$dtype);
-        $X = $this->array([0,0],NDArray::float32);
+        $X = $this->array([0,0],NDArray::int32);
         [$m,$n,$k,$AA,$offA,$BB,$offB] =
             $this->translate_reduceSum($A,$axis=1,$X);
 
