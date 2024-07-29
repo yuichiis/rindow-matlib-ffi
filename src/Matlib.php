@@ -1481,7 +1481,7 @@ class Matlib
         Buffer $X, int $offsetX, int $incX, // float
         bool $exclusive,
         bool $reverse,
-        Buffer $Y, int $offsetY, int $incY // int
+        Buffer $Y, int $offsetY, int $incY // float
         ) : void
     {
         $this->assert_shape_parameter("n", $n);
@@ -1509,6 +1509,49 @@ class Matlib
                 $pDataX = $X->addr($offsetX);
                 $pDataY = $Y->addr($offsetY);
                 $this->ffi->rindow_matlib_d_cumsum($n,$pDataX,$incX,$exclusive,$reverse,$pDataY,$incY);
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException("Unsupported data type.");
+            }
+        }
+    }
+
+    public function cumsumb(
+        int $m,
+        int $n,
+        int $k,
+        Buffer $A, int $offsetA, // float
+        bool $exclusive,
+        bool $reverse,
+        Buffer $B, int $offsetB, // float
+        ) : void
+    {
+        $this->assert_shape_parameter("m", $m);
+        $this->assert_shape_parameter("n", $n);
+        $this->assert_shape_parameter("k", $k);
+    
+        // Check Buffer
+        $this->assert_vector_buffer_spec("A", $A,$m*$n*$k,$offsetA,1);
+        $this->assert_vector_buffer_spec("B", $B,$m*$n*$k,$offsetB,1);
+    
+        // Check Buffer A and B
+        if($A->dtype()!=$B->dtype()) {
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$A->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and B: ".$types);
+        }
+    
+        switch ($A->dtype()) {
+            case NDArray::float32: {
+                $pDataA = $A->addr($offsetA);
+                $pDataB = $B->addr($offsetB);
+                $this->ffi->rindow_matlib_s_cumsumb($m,$n,$k,$pDataA,$exclusive,$reverse,$pDataB);
+                break;
+            }
+            case NDArray::float64: {
+                $pDataA = $A->addr($offsetA);
+                $pDataB = $B->addr($offsetB);
+                $this->ffi->rindow_matlib_d_cumsumb($m,$n,$k,$pDataA,$exclusive,$reverse,$pDataB);
                 break;
             }
             default: {

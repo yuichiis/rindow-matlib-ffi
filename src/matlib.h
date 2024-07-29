@@ -178,6 +178,8 @@ void rindow_matlib_d_searchsorted(int32_t m, int32_t n, double *a, int32_t ldA, 
     int32_t right, int32_t dtype, void *y, int32_t incY);
 void rindow_matlib_s_cumsum(int32_t n,float *x, int32_t incX,int32_t exclusive,int32_t reverse,float *y, int32_t incY);
 void rindow_matlib_d_cumsum(int32_t n,double *x, int32_t incX,int32_t exclusive,int32_t reverse,double *y, int32_t incY);
+void rindow_matlib_s_cumsumb(int32_t m,int32_t n,int32_t k,float *a, int32_t exclusive, int32_t reverse, float *b);
+void rindow_matlib_d_cumsumb(int32_t m,int32_t n,int32_t k,double *a, int32_t exclusive, int32_t reverse, double *b);
 
 int32_t rindow_matlib_s_transpose(int32_t ndim,int32_t *shape,int32_t *perm,float *a,float *b);
 int32_t rindow_matlib_d_transpose(int32_t ndim,int32_t *shape,int32_t *perm,double *a,double *b);

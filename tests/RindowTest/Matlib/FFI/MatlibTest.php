@@ -1950,6 +1950,54 @@ class MatlibTest extends TestCase
         ];
     }
 
+    public function translate_cumsumb(
+        NDArray $inputs,
+        int $axis=null,
+        bool $exclusive=null,
+        bool $reverse=null,
+        NDArray $outputs=null
+        ) : array
+    {
+        $ndim = $inputs->ndim();
+        $origAxis = $axis;
+        $axis ??= 0;
+        if($axis<0) {
+            $axis = $ndim+$axis;
+        }
+        if($axis<0 || $axis>$ndim-1) {
+            $origAxis = $origAxis ?? 'null';
+            throw new InvalidArgumentException("Invalid axis: ".$origAxis);
+        }
+        $exclusive ??= false;
+        $reverse ??= false;
+        $postfixShape = $inputs->shape();
+        $prefixShape = array_splice($postfixShape, 0, $axis);
+        $m = array_product($prefixShape);
+        $n = array_shift($postfixShape);
+        $k = array_product($postfixShape);
+        if($outputs===null) {
+            $outputs = $this->alloc($inputs->shape(),dtype:$inputs->dtype());
+        }
+        if($inputs->shape()!=$outputs->shape()) {
+            $shapeError = '('.implode(',',$inputs->shape()).'),('.implode(',',$outputs->shape()).')';
+            throw new InvalidArgumentException("Unmatch shape of dimension: ".$shapeError);
+        }
+        $AA = $inputs->buffer();
+        $offA = $inputs->offset();
+        $BB = $outputs->buffer();
+        $offB = $outputs->offset();
+
+        return [
+            $m,
+            $n,
+            $k,
+            $AA,$offA,
+            $exclusive,
+            $reverse,
+            $BB,$offB,
+        ];
+    }
+
     public function translate_transpose(
         NDArray $A,
         array|NDArray $perm,
@@ -6891,6 +6939,211 @@ class MatlibTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Unmatch data type for X and Y');
         $matlib->cumsum($n,$XX,$offsetX,$incX,$exclusive,$reverse,$YY,$offsetY,$incY);
+    }
+
+    /**
+    * @dataProvider providerDtypesFloats
+    */
+    public function testcumsumbNormal($params)
+    {
+        extract($params);
+        $matlib = $this->getMatlib();
+
+        $X = $this->array([1,2,1,2],dtype:$dtype);
+        $X2 = $this->array([1,2,3,4],dtype:$dtype);
+        $Y = $this->zeros([4],dtype:$dtype);
+        [$m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY] =
+            $this->translate_cumsumb($X,exclusive:false,reverse:false,outputs:$Y);
+        [$m2,$n2,$k2,$XX2,$offsetX2,$exclusive,$reverse,$YY2,$offsetY] =
+            $this->translate_cumsumb($X2,exclusive:false,reverse:false,outputs:$Y);
+
+        $matlib->cumsumb($m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY);
+        $this->assertEquals(
+            [1,3,4,6],
+            $Y->toArray()
+        );
+
+        $matlib->cumsumb($m2,$n2,$k2,$XX2,$offsetX2,$exclusive,$reverse,$YY,$offsetY);
+        $this->assertEquals(
+            [1,3,6,10],
+            $Y->toArray()
+        );
+
+        // exclusive=true
+        $matlib->cumsumb($m,$n,$k,$XX,$offsetX,true,$reverse,$YY,$offsetY);
+        $this->assertEquals(
+            [0,1,3,4],
+            $Y->toArray()
+        );
+
+        $matlib->cumsumb($m2,$n2,$k2,$XX2,$offsetX2,true,$reverse,$YY,$offsetY);
+        $this->assertEquals(
+            [0, 1, 3, 6],
+            $Y->toArray()
+        );
+
+        // reverse=true
+        $matlib->cumsumb($m,$n,$k,$XX,$offsetX,$exclusive,true,$YY,$offsetY);
+        $this->assertEquals(
+            [6,5,3,2],
+            $Y->toArray()
+        );
+
+        $matlib->cumsumb($m2,$n2,$k2,$XX2,$offsetX2,$exclusive,true,$YY,$offsetY);
+        $this->assertEquals(
+            [10,9,7,4],
+            $Y->toArray()
+        );
+
+        // exclusive=true & reverse=true
+        $matlib->cumsumb($m2,$n2,$k2,$XX2,$offsetX2,true,true,$YY,$offsetY);
+        $this->assertEquals(
+            [9, 7, 4, 0],
+            $Y->toArray()
+        );
+
+        // nan data
+        $X = $this->array([1,2,NAN,2],dtype:$dtype);
+        [$m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY] =
+            $this->translate_cumsumb($X,exclusive:false,reverse:false,outputs:$Y);
+        $matlib->cumsumb($m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY);
+        $this->assertEquals(1.0,$Y[0]);
+        $this->assertEquals(3.0,$Y[1]);
+        $this->assertTrue(is_nan($Y[2]));
+        $this->assertTrue(is_nan($Y[3]));
+
+        // nan data with reverse
+        $X = $this->array([1,2,NAN,2],dtype:$dtype);
+        [$m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY] =
+            $this->translate_cumsumb($X,exclusive:false,reverse:false,outputs:$Y);
+        $matlib->cumsumb($m,$n,$k,$XX,$offsetX,$exclusive,true,$YY,$offsetY);
+        $this->assertTrue(is_nan($Y[0]));
+        $this->assertTrue(is_nan($Y[1]));
+        $this->assertTrue(is_nan($Y[2]));
+        $this->assertEquals(2.0,$Y[3]);
+        //$this->assertEquals(3.0,$Y[2]);
+        //$this->assertEquals(1.0,$Y[3]);
+    }
+
+    /**
+    * @dataProvider providerDtypesFloats
+    */
+    public function testcumsumbWithAxis($params)
+    {
+        extract($params);
+        $matlib = $this->getMatlib();
+
+        $X = $this->array([
+            [[ 1, 2, 3],[ 4, 5, 6],[ 7, 8, 9]],
+            [[11,12,13],[14,15,16],[17,18,19]],
+            [[21,22,23],[24,25,26],[27,28,29]],
+        ],dtype:$dtype);
+        $Y = $this->zeros([3,3,3],dtype:$dtype);
+
+        [$m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY] =
+            $this->translate_cumsumb($X,axis:0,exclusive:false,reverse:false,outputs:$Y);
+        $matlib->cumsumb($m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY);
+        $this->assertEquals([
+            [[ 1,  2,  3],
+             [ 4,  5,  6],
+             [ 7,  8,  9]],
+    
+            [[12, 14, 16],
+             [18, 20, 22],
+             [24, 26, 28]],
+    
+            [[33, 36, 39],
+             [42, 45, 48],
+             [51, 54, 57]]
+        ],$Y->toArray());
+
+        [$m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY] =
+            $this->translate_cumsumb($X,axis:1,exclusive:false,reverse:false,outputs:$Y);
+        $matlib->cumsumb($m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY);
+        $this->assertEquals([
+            [[ 1,  2,  3],
+             [ 5,  7,  9],
+             [12, 15, 18]],
+    
+            [[11, 12, 13],
+             [25, 27, 29],
+             [42, 45, 48]],
+    
+            [[21, 22, 23],
+             [45, 47, 49],
+             [72, 75, 78]]
+        ],$Y->toArray());
+
+        [$m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY] =
+            $this->translate_cumsumb($X,axis:2,exclusive:false,reverse:false,outputs:$Y);
+        $matlib->cumsumb($m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY);
+        $this->assertEquals([
+            [[ 1,  3,  6],
+             [ 4,  9, 15],
+             [ 7, 15, 24]],
+    
+            [[11, 23, 36],
+             [14, 29, 45],
+             [17, 35, 54]],
+    
+            [[21, 43, 66],
+             [24, 49, 75],
+             [27, 55, 84]]
+        ],$Y->toArray());
+
+        // exclusive
+        [$m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY] =
+            $this->translate_cumsumb($X,axis:1,exclusive:true,reverse:false,outputs:$Y);
+        $matlib->cumsumb($m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY);
+        $this->assertEquals([
+            [[ 0,  0,  0],
+            [ 1,  2,  3],
+            [ 5,  7,  9]],
+    
+           [[ 0,  0,  0],
+            [11, 12, 13],
+            [25, 27, 29]],
+    
+           [[ 0,  0,  0],
+            [21, 22, 23],
+            [45, 47, 49]]
+        ],$Y->toArray());
+
+        // reverse
+        [$m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY] =
+            $this->translate_cumsumb($X,axis:1,exclusive:false,reverse:true,outputs:$Y);
+        $matlib->cumsumb($m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY);
+        $this->assertEquals([
+            [[12, 15, 18],
+            [11, 13, 15],
+            [ 7,  8,  9]],
+    
+           [[42, 45, 48],
+            [31, 33, 35],
+            [17, 18, 19]],
+    
+           [[72, 75, 78],
+            [51, 53, 55],
+            [27, 28, 29]]
+        ],$Y->toArray());
+
+        // exclusive & reverse
+        [$m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY] =
+            $this->translate_cumsumb($X,axis:1,exclusive:true,reverse:true,outputs:$Y);
+        $matlib->cumsumb($m,$n,$k,$XX,$offsetX,$exclusive,$reverse,$YY,$offsetY);
+        $this->assertEquals([
+            [[11, 13, 15],
+            [ 7,  8,  9],
+            [ 0,  0,  0]],
+    
+           [[31, 33, 35],
+            [17, 18, 19],
+            [ 0,  0,  0]],
+    
+           [[51, 53, 55],
+            [27, 28, 29],
+            [ 0,  0,  0]]
+        ],$Y->toArray());
     }
 
 
