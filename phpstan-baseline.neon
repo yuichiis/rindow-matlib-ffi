@@ -1,0 +1,6 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Call to an undefined method FFI\\:\\:rindow_matlib_common_get_version\\(\\)\\.$#"
+			count: 1
+			path: src/MatlibFactory.php
