@@ -133,7 +133,7 @@ class MatlibFactory
     /**
      * @param array<string> $libFiles
      */
-    public function interfaceVersion(array $libFiles) : ?string
+    protected function interfaceVersion(array $libFiles) : ?string
     {
         $version = null;
         $code = "char* rindow_matlib_common_get_version(void);\n";
