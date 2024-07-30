@@ -7,11 +7,16 @@ use FFI;
 //use FFI\Location\Locator as FFIEnvLocator;
 use FFI\Exception as FFIException;
 use RuntimeException;
+use LogicException;
 
 class MatlibFactory
 {
     private static ?FFI $ffi = null;
     private static ?string $libFile = null;
+
+    protected string $lowestVersion = "1.1.0";
+    protected string $overVersion   = "2.0.0";
+    protected ?string $currentVersion;
 
     /** @var array<string> $libs_win */
     protected array $libs_win = ['rindowmatlib.dll'];
@@ -46,6 +51,10 @@ class MatlibFactory
             }
         }
         $code = file_get_contents($headerFile);
+        $currentVersion = $this->interfaceVersion($libFiles);
+        if($currentVersion) {
+            $this->assertVersion("matlib", $currentVersion,$this->lowestVersion, $this->overVersion);
+        }
         // ***************************************************************
         // FFI Locator is incompletely implemented. It is often not found.
         // ***************************************************************
@@ -110,4 +119,36 @@ class MatlibFactory
             'error' => $this->error,
         ];
     }
+
+    protected function assertVersion(string $name, string $currentVersion, string $lowestVersion, string $overVersion) : void
+    {
+        if(version_compare($currentVersion, $lowestVersion)<0||
+            version_compare($currentVersion, $overVersion)>=0) {
+            throw new LogicException($name.' '.$currentVersion.' is an unsupported version. '.
+            'Supported versions are greater than or equal to '.$lowestVersion.
+            ' and less than '.$overVersion.'.');
+        }
+    }
+
+    /**
+     * @param array<string> $libFiles
+     */
+    protected function interfaceVersion(array $libFiles) : ?string
+    {
+        $version = null;
+        $code = "char* rindow_matlib_common_get_version(void);\n";
+        foreach ($libFiles as $filename) {
+            try {
+                $ffi = FFI::cdef($code,$filename);
+            } catch(FFIException $e) {
+                $this->error = "$filename not found: ".$e->getMessage();
+                continue;
+            }
+            $this->error = null;
+            $version = FFI::string($ffi->rindow_matlib_common_get_version());
+            break;
+        }
+        return $version;
+    }
+
 }
