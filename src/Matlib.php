@@ -2890,4 +2890,53 @@ class Matlib
             }
         }
     }
+
+    /**
+     *    A(m,n,k) := A(m,n,k) : X(m,k) = True
+     *                fill     : X(m,k) = False
+     */
+    public function masking(
+        int $m,
+        int $n,
+        int $k,
+        float $fill,
+        Buffer $X, int $offsetX,
+        Buffer $A, int $offsetA,
+        ) : void
+    {
+        $this->assert_shape_parameter("m", $m);
+        $this->assert_shape_parameter("n", $n);
+        $this->assert_shape_parameter("k", $k);
+    
+        // Check Buffer X
+        $this->assert_matrix_buffer_spec("X", $X,$m,$k,$offsetX,$k);
+    
+        // Check Buffer A
+        $this->assert_matrix_buffer_spec("A", $A,$m*$n,$k,$offsetA,$k);
+    
+        // Check Buffer X
+        if($X->dtype()!=NDArray::bool) {
+            $types = $this->dtypeToString[$X->dtype()];
+            throw new InvalidArgumentException('dtype of X must be bool.: '.$types);
+        }
+    
+        switch ($A->dtype()) {
+            case NDArray::float32: {
+                $pDataA = $A->addr($offsetA);
+                $pDataX = $X->addr($offsetX);
+                $this->ffi->rindow_matlib_s_masking($m, $n, $k, $fill, $pDataX, $pDataA);
+                break;
+            }
+            case NDArray::float64: {
+                $pDataA = $A->addr($offsetA);
+                $pDataX = $X->addr($offsetX);
+                $this->ffi->rindow_matlib_d_masking($m, $n, $k, $fill, $pDataX, $pDataA);
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException("Unsupported data type.");
+            }
+        }
+    }
+
 }

@@ -2166,6 +2166,110 @@ class MatlibTest extends TestCase
         //return $X;
     }
 
+    public function translate_masking(
+        NDArray $mask,
+        NDArray $data,
+        int $batchDims=null,
+        int $axis=null,
+        float $fill=null,
+        ) : array
+    {
+
+        //if($mask->dtype()!=NDArray::bool) {
+        //    $types = $this->dtypeToString[$mask->dtype()];
+        //    throw new InvalidArgumentException('dtype of mask must be bool. :'.$types);
+        //}
+        $batchDims ??= 0;
+        if($batchDims<0) {
+            $batchDims += $data->ndim();
+        }
+        if($batchDims>$data->ndim()) {
+            throw new InvalidArgumentException(
+                "batchDims ($batchDims) must be less than dims of data (".$data->ndim().") or equal."
+            );
+        }
+        $axis ??= $batchDims;
+        if($axis<0) {
+            $axis += $data->ndim();
+        }
+        if($axis>$data->ndim()) {
+            throw new InvalidArgumentException(
+                "axis ($axis) must be less than to ndims of data (".$data->ndim().")"
+            );
+        }
+        if($batchDims>$axis) {
+            if($axis==0) {
+                $batchDims = 0;
+            } else {
+                throw new InvalidArgumentException("batchDims ($batchDims) must be less than or equal to axis ($axis)");
+            }
+        }
+        $fill ??= 0;
+
+        //echo "data  sh: ".$this->printableShapes($data->shape())."\n";
+        //echo "mask sh: ".$this->printableShapes($mask->shape())."\n";
+        //echo "batchDims: ".$batchDims."\n";
+        // data
+        $outerShape = $data->shape();
+        $brodacastShape = array_splice($outerShape, $batchDims);
+        $innerShape = array_splice($brodacastShape, $axis-$batchDims);
+        // mask
+        $outerShapeX = $mask->shape();
+        $innerShapeX = array_splice($outerShapeX, $batchDims);
+
+        //echo "mask: ".$this->printableShapes($mask->shape())."\n";
+        //echo "data: ".$this->printableShapes($data->shape())."\n";
+        //echo "batchDims: ".$batchDims."\n";
+        //echo "axis: ".$axis."\n";
+        //echo "outerShape: ".$this->printableShapes($outerShape)."\n";
+        //echo "brodacastShape: ".$this->printableShapes($brodacastShape)."\n";
+        //echo "innerShape: ".$this->printableShapes($innerShape)."\n";
+        //echo "outerShapeX: ".$this->printableShapes($outerShapeX)."\n";
+        //echo "innerShapeX: ".$this->printableShapes($innerShapeX)."\n";
+
+        if($outerShape!=$outerShapeX) {
+            throw new InvalidArgumentException('Unmatch dimension outer shape.: '.
+                'mask('.implode(',',$mask->shape()).') => data('.implode(',',$data->shape()).')');
+        }
+        if($innerShape!=$innerShapeX) {
+            throw new InvalidArgumentException('Unmatch dimension inner shape.: '.
+                'mask('.implode(',',$mask->shape()).') => data('.implode(',',$data->shape()).')');
+        }
+        $m = (int)array_product($outerShape);
+        $n = (int)array_product($brodacastShape);
+        $k = (int)array_product($innerShape);
+
+        if($n==1) {
+            $k = $m*$k;
+            $m = 1;
+        }
+        //echo "m=$m,n=$n,k=$k\n";
+
+        $XX = $mask->buffer();
+        $offX = $mask->offset();
+        $AA = $data->buffer();
+        $offA = $data->offset();
+
+        //$this->math->masking(  // tempolary implements
+        //    $m,
+        //    $n,
+        //    $k,
+        //    $fill,
+        //    $XX,$offX,
+        //    $AA,$offA,
+        //);
+        //return $A;
+
+        return [
+            $m,
+            $n,
+            $k,
+            $fill,
+            $XX,$offX,
+            $AA,$offA,
+        ];
+    }
+    
     public static function providerDtypesFloats()
     {
         return [
@@ -10573,13 +10677,12 @@ class MatlibTest extends TestCase
     }
 
     /**
-    * @dataProvider providerDtypesFloats
+    * @dataProvider providerDtypesFloatsAndInteger8
     */
     public function testsliceNormal($params)
     {
         extract($params);
         $matlib = $this->getMatlib();
-        // float32
         // 3D
         $x = $this->array([
             [[0,1,2],
@@ -10593,7 +10696,7 @@ class MatlibTest extends TestCase
         ],dtype:$dtype);
         $this->assertEquals(3,$x->ndim());
         $y = $this->zeros([2,2,3],dtype:$dtype);
-        return [
+        [
             $reverse,
             $addMode,
             $m,
@@ -10631,6 +10734,64 @@ class MatlibTest extends TestCase
              [6,7,8],],
             [[15,16,17],
              [18,19,20],],
+        ],$y->toArray());
+    }
+
+    public function testSliceBoolNormal()
+    {
+        $dtype = NDArray::bool;
+        $matlib = $this->getMatlib();
+        // 3D
+        $x = $this->array([
+            [[true, false,false],
+             [true, true, false],
+             [true, true, true],
+             [false,true, true]],
+            [[false,false,true],
+             [false,true, true],
+             [true, true, true],
+             [true, true, false]],
+        ],dtype:$dtype);
+        $this->assertEquals(3,$x->ndim());
+        $y = $this->ones([2,2,3],dtype:$dtype);
+        [
+            $reverse,
+            $addMode,
+            $m,
+            $n,
+            $k,
+            $itemSize,
+            $AA,$offsetA,$incA,
+            $YY,$offsetY,$incY,
+            $startAxis0,$sizeAxis0,
+            $startAxis1,$sizeAxis1,
+            $startAxis2,$sizeAxis2
+        ] = $this->translate_slice(false,
+            $x,
+            $start=[0,1],
+            $size=[-1,2],
+            $y
+            );
+
+        $matlib->slice(
+            $reverse,
+            $addMode,
+            $m,
+            $n,
+            $k,
+            $itemSize,
+            $AA,$offsetA,$incA,
+            $YY,$offsetY,$incY,
+            $startAxis0,$sizeAxis0,
+            $startAxis1,$sizeAxis1,
+            $startAxis2,$sizeAxis2
+        );
+
+        $this->assertEquals([
+            [[true, true, false],
+             [true, true, true ]],
+            [[false,true, true ],
+             [true, true, true]],
         ],$y->toArray());
     }
 
@@ -12089,4 +12250,128 @@ class MatlibTest extends TestCase
             );
     }
 
+    ///**
+    //* @dataProvider providerDtypesFloats
+    //*/
+    //public function testMaskingSameSizeNormal($params)
+    //{
+    //    extract($params);
+    //    if($this->checkSkip('masking')){return;}
+//
+    //    $matlib = $this->getMatlib();
+//
+    //    $X = $this->array([true,false,true],dtype:NDArray::bool);
+    //    $A = $this->array([10,100,1000],dtype:$dtype);
+    //    [$trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA] =
+    //        $this->translate_multiply($X,$A);
+//
+    //    $matlib->masking($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
+    //    $this->assertEquals([10,0,1000],$A->toArray());
+    //}
+//
+    ///**
+    //* @dataProvider providerDtypesFloats
+    //*/
+    //public function testMaskingBroadcastNormal($params)
+    //{
+    //    extract($params);
+    //    if($this->checkSkip('masking')){return;}
+//
+    //    $matlib = $this->getMatlib();
+//
+    //    $X = $this->array([true,false,true],dtype:NDArray::bool);
+    //    $A = $this->array([[10,100,1000],[-1,-1,-1]],dtype:$dtype);
+    //    [$trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA] =
+    //        $this->translate_multiply($X,$A);
+//
+    //    $matlib->masking($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
+    //    $this->assertEquals([[10, 0,1000],[-1, 0,-1]],$A->toArray());
+    //}
+//
+    //public function testMaskingBroadcastTranspose()
+    //{
+    //    if($this->checkSkip('masking')){return;}
+//
+    //    $matlib = $this->getMatlib();
+//
+    //    $X = $this->array([true,false,true],dtype:NDArray::bool);
+    //    $A = $this->array([[10,100],[1000,10000],[-1,-1]]);
+    //    [$trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA] =
+    //        $this->translate_multiply($X,$A,true);
+//
+    //    $matlib->masking($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
+    //    $this->assertEquals([[10,100],[ 0, 0],[-1,-1]],$A->toArray());
+    //}
+//
+
+    /**
+    * @dataProvider providerDtypesFloats
+    */
+    public function testMaskingSameSizeNormal($params)
+    {
+        extract($params);
+        if($this->checkSkip('masking')){return;}
+
+        $matlib = $this->getMatlib();
+
+        $X = $this->array([true,false,true],dtype:NDArray::bool);
+        $A = $this->array([10,100,1000],dtype:$dtype);
+        [$M,$N,$K,$fill,$XX,$offX,$AA,$offA] =
+            $this->translate_masking($X,$A);
+
+        $matlib->masking($M,$N,$K,$fill,$XX,$offX,$AA,$offA);
+        $this->assertEquals([10,0,1000],$A->toArray());
+    }
+
+    /**
+    * @dataProvider providerDtypesFloats
+    */
+    public function testMaskingBroadcastWithGapNormal($params)
+    {
+        extract($params);
+        if($this->checkSkip('masking')){return;}
+
+        $matlib = $this->getMatlib();
+
+        // X:(2,  3)
+        // A:(2,4,3)
+        // outer:(2),bro:(4),inner:(3)
+        // m=2,n=4,k=3
+        $X = $this->array([
+            [true,false,true],
+            [false,true,false]
+        ],dtype:NDArray::bool);
+        $A = $this->array([
+            [[1,11,111],[2,12,112],[-3,13,113],[-4,14,114]],
+            [[1,21,211],[2,22,222],[-3,23,223],[-4,24,224]],
+        ],dtype:$dtype);
+        [$M,$N,$K,$fill,$XX,$offX,$AA,$offA] =
+            $this->translate_masking($X,$A,batchDims:1,axis:2);
+
+        $matlib->masking($M,$N,$K,$fill,$XX,$offX,$AA,$offA);
+        $this->assertEquals([
+            [[1, 0,111],[2, 0,112],[-3, 0,113],[-4, 0,114]],
+            [[0,21,  0],[0,22,  0],[ 0,23,  0],[ 0,24,  0]],
+        ],$A->toArray());
+    }
+
+    /**
+    * @dataProvider providerDtypesFloats
+    */
+    public function testMaskingMaskIsNotBoolType($params)
+    {
+        extract($params);
+        if($this->checkSkip('masking')){return;}
+
+        $matlib = $this->getMatlib();
+
+        $X = $this->array([1,0,1],dtype:NDArray::uint8);
+        $A = $this->array([10,100,1000],dtype:$dtype);
+        [$M,$N,$K,$fill,$XX,$offX,$AA,$offA] =
+            $this->translate_masking($X,$A);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('dtype of X must be bool.: uint8');
+        $matlib->masking($M,$N,$K,$fill,$XX,$offX,$AA,$offA);
+    }
 }

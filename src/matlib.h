@@ -120,6 +120,8 @@ void rindow_matlib_s_add(int32_t trans,int32_t m,int32_t n,float alpha,float *x,
 void rindow_matlib_d_add(int32_t trans,int32_t m,int32_t n,double alpha,double *x, int32_t incX,double *a, int32_t ldA);
 void rindow_matlib_s_duplicate(int32_t trans,int32_t m,int32_t n,float *x, int32_t incX,float *a, int32_t ldA);
 void rindow_matlib_d_duplicate(int32_t trans,int32_t m,int32_t n,double *x, int32_t incX,double *a, int32_t ldA);
+void rindow_matlib_s_masking(int32_t m,int32_t n,int32_t k,float fill,uint8_t *x,float *a);
+void rindow_matlib_d_masking(int32_t m,int32_t n,int32_t k,double fill,uint8_t *x,double *a);
 void rindow_matlib_s_square(int32_t n, float *x, int32_t incX);
 void rindow_matlib_d_square(int32_t n, double *x, int32_t incX);
 void rindow_matlib_s_sqrt(int32_t n, float *x, int32_t incX);
