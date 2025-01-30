@@ -1685,7 +1685,13 @@ class Matlib
                 break;
             }
             default: {
-                throw new InvalidArgumentException("Unsupported data type.");
+                if(!$this->is_integer_dtype($A->dtype())&&
+                    NDArray::bool!=$A->dtype()) {
+                    throw new InvalidArgumentException("Unsupported data type.");
+                }
+                $pDataA = $A->addr($offsetA);
+                $this->ffi->rindow_matlib_i_bandpart($m,$n,$k,$A->dtype(),$pDataA,$lower,$upper);
+                break;
             }
         }
     }

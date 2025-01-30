@@ -188,6 +188,7 @@ int32_t rindow_matlib_d_transpose(int32_t ndim,int32_t *shape,int32_t *perm,doub
 int32_t rindow_matlib_i_transpose(int32_t dtype,int32_t ndim,int32_t *shape,int32_t *perm,void *a,void *b);
 void rindow_matlib_s_bandpart(int32_t m, int32_t n, int32_t k,float *a,int32_t lower, int32_t upper);
 void rindow_matlib_d_bandpart(int32_t m, int32_t n, int32_t k,double *a,int32_t lower, int32_t upper);
+void rindow_matlib_i_bandpart(int32_t m, int32_t n, int32_t k,int32_t dtype,void *a,int32_t lower, int32_t upper);
 
 int32_t rindow_matlib_s_gather(int32_t reverse,int32_t addMode,int32_t n,int32_t k,int32_t numClass,int32_t dtype,void *x,float *a,float *b);
 int32_t rindow_matlib_d_gather(int32_t reverse,int32_t addMode,int32_t n,int32_t k,int32_t numClass,int32_t dtype,void *x,double *a,double *b);

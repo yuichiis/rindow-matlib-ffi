@@ -84,8 +84,13 @@ class MatlibTest extends TestCase
         $ndarray = $this->array(null,$dtype,$shape);
         $buffer = $ndarray->buffer();
         $size = $buffer->count();
+        if($dtype==NDArray::bool) {
+            $value = true;
+        } else {
+            $value = 1;
+        }
         for($i=0;$i<$size;$i++) {
-            $buffer[$i] = 1;
+            $buffer[$i] = $value;
         }
         return $ndarray;
     }
@@ -2308,6 +2313,42 @@ class MatlibTest extends TestCase
             ]],
             'int32' => [[
                 'dtype' => NDArray::int8,
+            ]],
+        ];
+    }
+
+    public static function providerDtypesFloatsAndAllInteger()
+    {
+        return [
+            'float32' => [[
+                'dtype' => NDArray::float32,
+            ]],
+            'float64' => [[
+                'dtype' => NDArray::float64,
+            ]],
+            'int8' => [[
+                'dtype' => NDArray::int8,
+            ]],
+            'uint8' => [[
+                'dtype' => NDArray::uint8,
+            ]],
+            'int16' => [[
+                'dtype' => NDArray::int16,
+            ]],
+            'uint16' => [[
+                'dtype' => NDArray::uint16,
+            ]],
+            'int32' => [[
+                'dtype' => NDArray::int32,
+            ]],
+            'uint32' => [[
+                'dtype' => NDArray::uint32,
+            ]],
+            'int64' => [[
+                'dtype' => NDArray::int64,
+            ]],
+            'uint64' => [[
+                'dtype' => NDArray::uint64,
             ]],
         ];
     }
@@ -8081,7 +8122,7 @@ class MatlibTest extends TestCase
     }
     
     /**
-    * @dataProvider providerDtypesFloats
+    * @dataProvider providerDtypesFloatsAndAllInteger
     */
     public function testBandpartNormal($params)
     {
@@ -8168,6 +8209,94 @@ class MatlibTest extends TestCase
             [[1,0,0],
              [1,1,0],
              [0,1,1]],
+        ],$A->toArray());
+    }
+
+    public function testBandpartBoolean()
+    {
+        $dtype = NDArray::bool;
+        $matlib = $this->getMatlib();
+
+        // under
+        $A = $this->ones([2,3,3],dtype:$dtype);
+        [
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        ] = $this->translate_bandpart($A,0,-1);
+        $matlib->bandpart(
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        );
+        $this->assertEquals([
+            [[true, true, true],
+             [false,true, true],
+             [false,false,true]],
+            [[true, true, true],
+             [false,true, true],
+             [false,false,true]],
+        ],$A->toArray());
+
+        $A = $this->ones([2,3,3],dtype:$dtype);
+        [
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        ] = $this->translate_bandpart($A,0,1);
+        $matlib->bandpart(
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        );
+        $this->assertEquals([
+            [[true, true, false],
+             [false,true, true],
+             [false,false,true]],
+            [[true, true, false],
+             [false,true, true],
+             [false,false,true]],
+        ],$A->toArray());
+
+        // upper
+        $A = $this->ones([2,3,3],dtype:$dtype);
+        [
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        ] = $this->translate_bandpart($A,-1,0);
+        $matlib->bandpart(
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        );
+        $this->assertEquals([
+            [[true, false,false],
+             [true, true,false],
+             [true, true,true ]],
+            [[true, false,false],
+             [true, true,false],
+             [true, true,true ]],
+        ],$A->toArray());
+
+        $A = $this->ones([2,3,3],dtype:$dtype);
+        [
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        ] = $this->translate_bandpart($A,1,0);
+        $matlib->bandpart(
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        );
+        $this->assertEquals([
+            [[true, false,false],
+             [true, true, false],
+             [false,true, true ]],
+            [[true, false,false],
+             [true, true, false],
+             [false,true, true ]],
         ],$A->toArray());
     }
 
@@ -8270,24 +8399,24 @@ class MatlibTest extends TestCase
         );
     }
 
-    public function testBandpartUnsupportedDtype()
-    {
-        $matlib = $this->getMatlib();
-
-        $A = $this->ones([2,3,3],NDArray::int32);
-        [
-            $m,$n,$k,
-            $AA, $offsetA,
-            $lower,$upper
-        ] = $this->translate_bandpart($A,0,-1);
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Unsupported data type.');
-        $matlib->bandpart(
-            $m,$n,$k,
-            $AA, $offsetA,
-            $lower,$upper
-        );
-    }
+    //public function testBandpartUnsupportedDtype()
+    //{
+    //    $matlib = $this->getMatlib();
+//
+    //    $A = $this->ones([2,3,3],NDArray::int32);
+    //    [
+    //        $m,$n,$k,
+    //        $AA, $offsetA,
+    //        $lower,$upper
+    //    ] = $this->translate_bandpart($A,0,-1);
+    //    $this->expectException(InvalidArgumentException::class);
+    //    $this->expectExceptionMessage('Unsupported data type.');
+    //    $matlib->bandpart(
+    //        $m,$n,$k,
+    //        $AA, $offsetA,
+    //        $lower,$upper
+    //    );
+    //}
 
     /**
     * @dataProvider providerDtypesFloats
