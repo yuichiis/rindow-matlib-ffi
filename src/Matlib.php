@@ -45,6 +45,46 @@ class Matlib
         NDArray::float32=>'float32', NDArray::float64=>'float64',
         NDArray::complex64=>'complex64', NDArray::complex128=>'complex128',
     ];
+    /** @var array<int,string> $typeString */
+    protected static $typeString = [
+        NDArray::bool    => 'uint8_t',
+        NDArray::int8    => 'int8_t',
+        NDArray::int16   => 'int16_t',
+        NDArray::int32   => 'int32_t',
+        NDArray::int64   => 'int64_t',
+        NDArray::uint8   => 'uint8_t',
+        NDArray::uint16  => 'uint16_t',
+        NDArray::uint32  => 'uint32_t',
+        NDArray::uint64  => 'uint64_t',
+        //NDArray::float8  => 'N/A',
+        //NDArray::float16 => 'N/A',
+        NDArray::float32 => 'float',
+        NDArray::float64 => 'double',
+        //NDArray::complex16 => 'N/A',
+        //NDArray::complex32 => 'N/A',
+        NDArray::complex64 => 'rindow_complex_float',
+        NDArray::complex128  => 'rindow_complex_double',
+    ];
+    /** @var array<int,int> $valueSize */
+    protected static $valueSize = [
+        NDArray::bool    => 1,
+        NDArray::int8    => 1,
+        NDArray::int16   => 2,
+        NDArray::int32   => 4,
+        NDArray::int64   => 8,
+        NDArray::uint8   => 1,
+        NDArray::uint16  => 2,
+        NDArray::uint32  => 4,
+        NDArray::uint64  => 8,
+        //NDArray::float8  => 'N/A',
+        //NDArray::float16 => 'N/A',
+        NDArray::float32 => 4,
+        NDArray::float64 => 8,
+        //NDArray::complex16 => 'N/A',
+        //NDArray::complex32 => 'N/A',
+        NDArray::complex64 => 8,
+        NDArray::complex128  => 16,
+    ];
 
     protected object $ffi;
 
@@ -79,6 +119,15 @@ class Matlib
     {
         $string = $this->ffi->rindow_matlib_common_get_version();
         return FFI::string($string);
+    }
+
+    protected function aligned(int $size, int $dtype,int $base) : int
+    {
+        $valueSize = self::$valueSize[$dtype];
+        $bytes = $size*$valueSize;
+        $alignedBytes = intdiv(($bytes+$base-1),$base)*$base;
+        $alignedSize = intdiv(($alignedBytes+$valueSize-1),$valueSize)*$valueSize;
+        return $alignedSize;
     }
 
     /**
@@ -2898,14 +2947,16 @@ class Matlib
     }
 
     /**
-     *    A(m,n,k) := A(m,n,k) : X(m,k) = True
-     *                fill     : X(m,k) = False
+     *    A(m,n,k,len) := A(m,n,k,len) : X(m,k) = True
+     *                    fill         : X(m,k) = False
      */
     public function masking(
         int $m,
         int $n,
         int $k,
-        float $fill,
+        int $len,
+        mixed $fill,
+        int $mode,                  // mode=0: set , mode=1: add
         Buffer $X, int $offsetX,
         Buffer $A, int $offsetA,
         ) : void
@@ -2913,12 +2964,13 @@ class Matlib
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_shape_parameter("k", $k);
+        $this->assert_shape_parameter("len", $len);
     
         // Check Buffer X
         $this->assert_matrix_buffer_spec("X", $X,$m,$k,$offsetX,$k);
     
         // Check Buffer A
-        $this->assert_matrix_buffer_spec("A", $A,$m*$n,$k,$offsetA,$k);
+        $this->assert_matrix_buffer_spec("A", $A,$m*$n,$k*$len,$offsetA,$k);
     
         // Check Buffer X
         if($X->dtype()!=NDArray::bool) {
@@ -2930,13 +2982,33 @@ class Matlib
             case NDArray::float32: {
                 $pDataA = $A->addr($offsetA);
                 $pDataX = $X->addr($offsetX);
-                $this->ffi->rindow_matlib_s_masking($m, $n, $k, $fill, $pDataX, $pDataA);
+                $this->ffi->rindow_matlib_s_masking($m, $n, $k, $len, $fill, $mode, $pDataX, $pDataA);
                 break;
             }
             case NDArray::float64: {
                 $pDataA = $A->addr($offsetA);
                 $pDataX = $X->addr($offsetX);
-                $this->ffi->rindow_matlib_d_masking($m, $n, $k, $fill, $pDataX, $pDataA);
+                $this->ffi->rindow_matlib_d_masking($m, $n, $k, $len, $fill, $mode, $pDataX, $pDataA);
+                break;
+            }
+            case NDArray::bool:
+            case NDArray::int8:
+            case NDArray::uint8:
+            case NDArray::int16:
+            case NDArray::uint16:
+            case NDArray::int32:
+            case NDArray::uint32:
+            case NDArray::int64:
+            case NDArray::uint64: {
+                $dtype = $A->dtype();
+                $declaration = self::$typeString[$dtype];
+                $size = $this->aligned(1,$dtype,16);  // 1 item
+                $fillValue = $this->ffi->new("{$declaration}[{$size}]");
+                $fillValue[0] = $fill;
+                $pDataA = $A->addr($offsetA);
+                $pDataX = $X->addr($offsetX);
+                $pFill = FFI::addr($fillValue[0]);
+                $this->ffi->rindow_matlib_i_masking($dtype, $m, $n, $k, $len, $pFill, $mode, $pDataX, $pDataA);
                 break;
             }
             default: {
@@ -2945,4 +3017,137 @@ class Matlib
         }
     }
 
+    public function einsum(
+        Buffer $sizeOfIndices,
+        Buffer $A,
+        int $offsetA,
+        Buffer $labelA,
+        Buffer $B,
+        int $offsetB,
+        Buffer $labelB,
+        Buffer $C,
+        int $offsetC,
+        int $ndimC,
+        Buffer $shapeA=null,
+        Buffer $shapeB=null,
+    )
+    {
+        if($offsetA<0) {
+            throw new InvalidArgumentException("Argument offsetA must be greater than or equals 0.");
+        }
+        if($offsetB<0) {
+            throw new InvalidArgumentException("Argument offsetB must be greater than or equals 0.");
+        }
+        if($offsetC<0) {
+            throw new InvalidArgumentException("Argument offsetC must be greater than or equals 0.");
+        }
+        if($labelA->dtype()!=NDArray::int32) {
+            throw new InvalidArgumentException('dtype of labelA must be int32.');
+        }
+        if($labelB->dtype()!=NDArray::int32) {
+            throw new InvalidArgumentException('dtype of labelB must be int32.');
+        }
+        if($shapeA!=null) {
+            if($shapeA->dtype()!=NDArray::int32) {
+                throw new InvalidArgumentException('dtype of shapeA must be int32.');
+            }
+            if(count($shapeA)!=count($labelA)) {
+                throw new InvalidArgumentException('size of shapeA must be the same to labelA.');
+            }
+        }
+        if($shapeB!=null) {
+            if($shapeB->dtype()!=NDArray::int32) {
+                throw new InvalidArgumentException('dtype of shapeB must be int32.');
+            }
+            if(count($shapeB)!=count($labelB)) {
+                throw new InvalidArgumentException('size of shapeB must be the same to labelB.');
+            }
+        }
+        // Check Buffer Types
+        if($A->dtype()!=$B->dtype()||$A->dtype()!=$C->dtype()) {
+            throw new InvalidArgumentException('dtype of arrays must be the same.');
+        }
+
+        $depth = count($sizeOfIndices);
+        $ndimA = count($labelA);
+        $ndimB = count($labelB);
+
+        if($ndimC>$depth) {
+            throw new InvalidArgumentException("ndimC must be less or equal size of SizeOfIndices.: {$ndimC} given.");
+        }
+
+        switch ($A->dtype()) {
+            case NDArray::float32: {
+                $pDataA = $A->addr($offsetA);
+                $pDataB = $B->addr($offsetB);
+                $pDataC = $C->addr($offsetC);
+                $pSizeOfIndices = $sizeOfIndices->addr(0);
+                $pLabelA = $labelA->addr(0);
+                $pLabelB = $labelB->addr(0);
+                $pShapeA = ($shapeA===null)? null : $shapeA->addr(0);
+                $pShapeB = ($shapeB===null)? null : $shapeB->addr(0);
+                $rc = $this->ffi->rindow_matlib_s_einsum(
+                    $depth,
+                    $pSizeOfIndices,
+                    $pDataA,
+                    $ndimA,
+                    $pLabelA,
+                    $pDataB,
+                    $ndimB,
+                    $pLabelB,
+                    $pDataC,
+                    $ndimC,
+                    $pShapeA,
+                    $pShapeB,
+                );
+                break;
+            }
+            case NDArray::float64: {
+                $pDataA = $A->addr($offsetA);
+                $pDataB = $B->addr($offsetB);
+                $pDataC = $C->addr($offsetC);
+                $pSizeOfIndices = $sizeOfIndices->addr(0);
+                $pLabelA = $labelA->addr(0);
+                $pLabelB = $labelB->addr(0);
+                $pShapeA = ($shapeA===null)? null : $shapeA->addr(0);
+                $pShapeB = ($shapeB===null)? null : $shapeB->addr(0);
+                $rc = $this->ffi->rindow_matlib_d_einsum(
+                    $depth,
+                    $pSizeOfIndices,
+                    $pDataA,
+                    $ndimA,
+                    $pLabelA,
+                    $pDataB,
+                    $ndimB,
+                    $pLabelB,
+                    $pDataC,
+                    $ndimC,
+                    $pShapeA,
+                    $pShapeB,
+                );
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException("Unsupported data type.");
+            }
+        }
+        if($rc) {
+            $error = -$rc;
+            $chrA = ord('a')-1;
+            $where = chr($chrA+intdiv($error,1000));
+            $error = $error % 1000;
+                        
+            switch($error) {
+                case 1: {
+                    throw new InvalidArgumentException("label number is too large in label{$where}.");
+                }
+                case 2: {
+                    throw new InvalidArgumentException("indicator number is too large when computing index of {$where}.");
+                }
+                default: {
+                    throw new RuntimeException(sprintf("Unkown Error (%d)", $rc));
+                }
+            }
+        }
+    }
 }

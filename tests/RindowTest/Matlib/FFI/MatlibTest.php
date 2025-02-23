@@ -2177,6 +2177,7 @@ class MatlibTest extends TestCase
         int $batchDims=null,
         int $axis=null,
         float $fill=null,
+        int $mode=null
         ) : array
     {
 
@@ -2209,7 +2210,13 @@ class MatlibTest extends TestCase
                 throw new InvalidArgumentException("batchDims ($batchDims) must be less than or equal to axis ($axis)");
             }
         }
+        if($mask->ndim()<$batchDims) {
+            throw new InvalidArgumentException(
+                "batchDims ($batchDims) must be less than or equal to ndims of mask (".$mask->ndim().")"
+            );
+        }
         $fill ??= 0;
+        $mode ??= 0;
 
         //echo "data  sh: ".$this->printableShapes($data->shape())."\n";
         //echo "mask sh: ".$this->printableShapes($mask->shape())."\n";
@@ -2218,6 +2225,7 @@ class MatlibTest extends TestCase
         $outerShape = $data->shape();
         $brodacastShape = array_splice($outerShape, $batchDims);
         $innerShape = array_splice($brodacastShape, $axis-$batchDims);
+        $innterBroadcastShape = array_splice($innerShape,$mask->ndim()-$batchDims);
         // mask
         $outerShapeX = $mask->shape();
         $innerShapeX = array_splice($outerShapeX, $batchDims);
@@ -2243,10 +2251,17 @@ class MatlibTest extends TestCase
         $m = (int)array_product($outerShape);
         $n = (int)array_product($brodacastShape);
         $k = (int)array_product($innerShape);
+        $len = (int)array_product($innterBroadcastShape);
 
         if($n==1) {
             $k = $m*$k;
             $m = 1;
+        }
+        if($k==1) {
+            $k = $m;
+            $len = $n*$len;
+            $m = 1;
+            $n = 1;
         }
         //echo "m=$m,n=$n,k=$k\n";
 
@@ -2269,12 +2284,134 @@ class MatlibTest extends TestCase
             $m,
             $n,
             $k,
+            $len,
             $fill,
+            $mode,
             $XX,$offX,
             $AA,$offA,
         ];
     }
     
+    protected function parseEinsum(
+        string $equation,
+        NDArray ...$arrays,
+    ) : array
+    {
+        [$a,$b] = $arrays;
+        $equation = str_replace(' ','',$equation);
+        if(!preg_match(
+            "/([a-zA-Z]+),([a-zA-Z]+)->([a-zA-Z]+)/",
+            $equation,
+            $split_string
+        )) {
+            throw new InvalidArgumentException("Not recognized as an equation: '{$equation}'");
+        }
+        $labelA = $split_string[1];
+        $labelB = $split_string[2];
+        $labelC = $split_string[3];
+        if($a->ndim()!=strlen($labelA)) {
+            $msg = "(".implode(',',$a->shape()).")";
+            throw new InvalidArgumentException("The rank of array A does not match the equation: '{$equation}', but {$msg} given.");
+        }
+        if($b->ndim()!=strlen($labelB)) {
+            $msg = "(".implode(',',$b->shape()).")";
+            throw new InvalidArgumentException("The rank of array B does not match the equation: '{$equation}', but {$msg} given.");
+        }
+
+        $allIndices = [];
+        $labels = [$labelA,$labelB];
+        $shapes = [$a->shape(),$b->shape()];
+        foreach($labels as $idx => $label) {
+            foreach(str_split($label) as $axis => $chr) {
+                if(array_key_exists($chr,$allIndices)) {
+                    if($allIndices[$chr]!=$shapes[$idx][$axis]) {
+                        $shapeError = '('.implode(',',$a->shape()).'),('.implode(',',$b->shape()).')';
+                        throw new InvalidArgumentException("Unmatch shapes in index letter '{$chr}' in equation:'{$equation}', but shapes {$shapeError} given.");
+                    }
+                } else {
+                    $allIndices[$chr] = $shapes[$idx][$axis];
+                }
+            }
+        }
+        $outputShape = [];
+        foreach(str_split($labelC) as $axis => $chr) {
+            if(!array_key_exists($chr,$allIndices)) {
+                throw new InvalidArgumentException("Target index letter '{$chr}' not found in inputs.:'{$equation}'");
+            }
+            $outputShape[$chr] = $allIndices[$chr];
+            unset($allIndices[$chr]);
+        }
+        $allIndices = array_merge($outputShape,$allIndices);
+        $outputShape = array_values($outputShape);
+
+        // complie labels
+        $allLabels = array_keys($allIndices);
+        $sizeOfIndices = array_values($allIndices);
+        $labels = [$labelA,$labelB,$labelC];
+        $compiledLabels = [];
+        foreach($labels as $label) {
+            $compiledLabel = [];
+            foreach(str_split($label) as $axis => $chr) {
+                $compiledLabel[] = array_search($chr,$allLabels);
+            }
+            $compiledLabels[] = $compiledLabel;
+        }
+
+        return [
+            $sizeOfIndices,
+            $compiledLabels,
+            $outputShape,
+        ];
+    }
+
+
+    public function translate_einsum(
+        string $equation,
+        NDArray ...$arrays,
+    ) : array
+    {
+        if(count($arrays)!=2) {
+            throw new InvalidArgumentException("Currently, only two array operations are supported.");
+        }
+        ///////////////////
+        // parse einsum string
+        ///////////////////
+        [
+            $sizeOfIndices,
+            $compiledLabels,
+            $outputShape,
+        ] = $this->parseEinsum($equation, ...$arrays);
+        [$a,$b] = $arrays;
+        [$labelA,$labelB,$labelC] = $compiledLabels;
+        $outputs = $this->zeros($outputShape,dtype:$a->dtype());
+        //$this->zeros($outputs);
+
+        $sizeOfIndices = $this->array($sizeOfIndices,dtype:NDArray::int32)->buffer();
+        $labelA = $this->array($labelA,dtype:NDArray::int32)->buffer();
+        $labelB = $this->array($labelB,dtype:NDArray::int32)->buffer();
+        $AA = $a->buffer();
+        $offsetA = $a->offset();
+        $BB = $b->buffer();
+        $offsetB = $b->offset();
+        $CC = $outputs->buffer();
+        $offsetC = $outputs->offset();
+        $ndimC = $outputs->ndim();
+
+        return [
+            $sizeOfIndices,
+            $AA,
+            $offsetA,
+            $labelA,
+            $BB,
+            $offsetB,
+            $labelB,
+            $CC,
+            $offsetC,
+            $ndimC,
+            $outputs,
+        ];
+    }
+
     public static function providerDtypesFloats()
     {
         return [
@@ -12434,7 +12571,7 @@ class MatlibTest extends TestCase
 //
 
     /**
-    * @dataProvider providerDtypesFloats
+    * @dataProvider providerDtypesFloatsAndInteger3264
     */
     public function testMaskingSameSizeNormal($params)
     {
@@ -12445,47 +12582,60 @@ class MatlibTest extends TestCase
 
         $X = $this->array([true,false,true],dtype:NDArray::bool);
         $A = $this->array([10,100,1000],dtype:$dtype);
-        [$M,$N,$K,$fill,$XX,$offX,$AA,$offA] =
+        [$M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA] =
             $this->translate_masking($X,$A);
 
-        $matlib->masking($M,$N,$K,$fill,$XX,$offX,$AA,$offA);
+        $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
         $this->assertEquals([10,0,1000],$A->toArray());
     }
 
     /**
-    * @dataProvider providerDtypesFloats
+    * @dataProvider providerDtypesFloatsAndInteger3264
     */
-    public function testMaskingBroadcastWithGapNormal($params)
+    public function testMaskingBroadcastWithGapAndLenNormal($params)
     {
         extract($params);
         if($this->checkSkip('masking')){return;}
 
         $matlib = $this->getMatlib();
 
-        // X:(2,  3)
-        // A:(2,4,3)
-        // outer:(2),bro:(4),inner:(3)
-        // m=2,n=4,k=3
+        // broadcast with gap and implicit len
+        // X:(2,  3  )
+        // A:(2,4,3,2)
+        // outer:(2),bro:(4),inner:(3),bro2:(2)
+        // m=2,n=4,k=3,len=2
         $X = $this->array([
             [true,false,true],
             [false,true,false]
         ],dtype:NDArray::bool);
         $A = $this->array([
-            [[1,11,111],[2,12,112],[-3,13,113],[-4,14,114]],
-            [[1,21,211],[2,22,222],[-3,23,223],[-4,24,224]],
+            [[[1,-1],[11,-11],[111,-111]],
+             [[2,-2],[12,-12],[112,-112]],
+             [[-3,3],[13,-13],[113,-113]],
+             [[-4,4],[14,-14],[114,-114]]],
+            [[[1,-1],[21,-21],[211,-211]],
+             [[2,-2],[22,-22],[222,-222]],
+             [[-3,3],[23,-23],[223,-223]],
+             [[-4,4],[24,-24],[224,-224]]],
         ],dtype:$dtype);
-        [$M,$N,$K,$fill,$XX,$offX,$AA,$offA] =
+        [$M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA] =
             $this->translate_masking($X,$A,batchDims:1,axis:2);
 
-        $matlib->masking($M,$N,$K,$fill,$XX,$offX,$AA,$offA);
+        $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
         $this->assertEquals([
-            [[1, 0,111],[2, 0,112],[-3, 0,113],[-4, 0,114]],
-            [[0,21,  0],[0,22,  0],[ 0,23,  0],[ 0,24,  0]],
+            [[[1,-1],[ 0,  0],[111,-111]],
+             [[2,-2],[ 0,  0],[112,-112]],
+             [[-3,3],[ 0,  0],[113,-113]],
+             [[-4,4],[ 0,  0],[114,-114]]],
+            [[[0, 0],[21,-21],[  0,   0]],
+             [[0, 0],[22,-22],[  0,   0]],
+             [[0, 0],[23,-23],[  0,   0]],
+             [[0, 0],[24,-24],[  0,   0]]],
         ],$A->toArray());
     }
 
     /**
-    * @dataProvider providerDtypesFloats
+    * @dataProvider providerDtypesFloatsAndInteger3264
     */
     public function testMaskingMaskIsNotBoolType($params)
     {
@@ -12496,11 +12646,116 @@ class MatlibTest extends TestCase
 
         $X = $this->array([1,0,1],dtype:NDArray::uint8);
         $A = $this->array([10,100,1000],dtype:$dtype);
-        [$M,$N,$K,$fill,$XX,$offX,$AA,$offA] =
+        [$M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA] =
             $this->translate_masking($X,$A);
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('dtype of X must be bool.: uint8');
-        $matlib->masking($M,$N,$K,$fill,$XX,$offX,$AA,$offA);
+        $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
     }
+
+    /**
+    * @dataProvider providerDtypesFloatsAndInteger3264
+    */
+    public function testMaskingAddMode($params)
+    {
+        extract($params);
+        if($this->checkSkip('masking')){return;}
+
+        $matlib = $this->getMatlib();
+
+        $X = $this->array([true,false,true],dtype:NDArray::bool);
+        $A = $this->array([10,100,1000],dtype:$dtype);
+        [$M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA] =
+            $this->translate_masking($X,$A,fill:-10000,mode:1);
+
+        $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
+        $this->assertEquals([10,-9900,1000],$A->toArray());
+    }
+
+    public function testMaskingBoolSet()
+    {
+        if($this->checkSkip('masking')){return;}
+
+        $matlib = $this->getMatlib();
+        $dtype = NDArray::bool;
+
+        $X = $this->array([true, true, false,false,false,true ],dtype:NDArray::bool);
+        $A = $this->array([true, false,true, false,true, true ],dtype:$dtype);
+        [$M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA] =
+            $this->translate_masking($X,$A);
+
+        $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
+        $this->assertEquals([true, false,false,false,false,true],$A->toArray());
+    }
+
+    public function testMaskingBoolAdd()
+    {
+        if($this->checkSkip('masking')){return;}
+
+        $matlib = $this->getMatlib();
+        $dtype = NDArray::bool;
+
+        $X = $this->array([true, true, false,false,false,true ],dtype:NDArray::bool);
+        $A = $this->array([true, false,true, false,true, true ],dtype:$dtype);
+        [$M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA] =
+            $this->translate_masking($X,$A,fill:true,mode:1);
+
+        $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
+        $this->assertEquals([true,false,true, true, true, true ],$A->toArray());
+    }
+
+    /**
+    * @dataProvider providerDtypesFloats
+    */
+    public function testEinsumSimple($params)
+    {
+        extract($params);
+        if($this->checkSkip('einsum')){return;}
+
+        $matlib = $this->getMatlib();
+
+        $equation = 'ab,bc->ac';
+        $A = $this->array([
+            [1,2,3],
+            [4,5,6],
+        ],dtype:$dtype);
+        $B = $this->array([
+            [1,2,3,4],
+            [5,6,7,8],
+            [9,10,11,12],
+        ],dtype:$dtype);
+        [
+            $sizeOfIndices,
+            $AA,
+            $offsetA,
+            $labelA,
+            $BB,
+            $offsetB,
+            $labelB,
+            $CC,
+            $offsetC,
+            $ndimC,
+            $outputs,
+        ] = $this->translate_einsum($equation,$A,$B);
+
+        $matlib->einsum(
+            $sizeOfIndices,
+            $AA,
+            $offsetA,
+            $labelA,
+            $BB,
+            $offsetB,
+            $labelB,
+            $CC,
+            $offsetC,
+            $ndimC,
+        );
+
+        $this->assertEquals([
+            [ 38,  44,  50,  56],
+            [ 83,  98, 113, 128],
+        ],$outputs->toArray());
+    }
+
 }

@@ -120,8 +120,9 @@ void rindow_matlib_s_add(int32_t trans,int32_t m,int32_t n,float alpha,float *x,
 void rindow_matlib_d_add(int32_t trans,int32_t m,int32_t n,double alpha,double *x, int32_t incX,double *a, int32_t ldA);
 void rindow_matlib_s_duplicate(int32_t trans,int32_t m,int32_t n,float *x, int32_t incX,float *a, int32_t ldA);
 void rindow_matlib_d_duplicate(int32_t trans,int32_t m,int32_t n,double *x, int32_t incX,double *a, int32_t ldA);
-void rindow_matlib_s_masking(int32_t m,int32_t n,int32_t k,float fill,uint8_t *x,float *a);
-void rindow_matlib_d_masking(int32_t m,int32_t n,int32_t k,double fill,uint8_t *x,double *a);
+void rindow_matlib_s_masking(int32_t m,int32_t n,int32_t k,int32_t len,float fill,int32_t mode,uint8_t *x,float *a);
+void rindow_matlib_d_masking(int32_t m,int32_t n,int32_t k,int32_t len,double fill,int32_t mode,uint8_t *x,double *a);
+void rindow_matlib_i_masking(int32_t dtype,int32_t m,int32_t n,int32_t k,int32_t len,void *fill,int32_t mode,uint8_t *x,void *a);
 void rindow_matlib_s_square(int32_t n, float *x, int32_t incX);
 void rindow_matlib_d_square(int32_t n, double *x, int32_t incX);
 void rindow_matlib_s_sqrt(int32_t n, float *x, int32_t incX);
@@ -149,8 +150,12 @@ int32_t rindow_matlib_s_onehot(int32_t dtype, int32_t m, int32_t n, void *x, int
 int32_t rindow_matlib_d_onehot(int32_t dtype, int32_t m, int32_t n, void *x, int32_t incX, double alpha, double *a, int32_t ldA);
 void rindow_matlib_s_softmax(int32_t m, int32_t n, float *a, int32_t ldA);
 void rindow_matlib_d_softmax(int32_t m, int32_t n, double *a, int32_t ldA);
+// ********************************************************
+// This function is unofficial.
+// It may be changed without notice.
 void rindow_matlib_s_topk(int32_t m, int32_t n, float *input, int32_t k, int32_t sorted, float *values, int32_t *indices);
 void rindow_matlib_d_topk(int32_t m, int32_t n, double *input, int32_t k, int32_t sorted, double *values, int32_t *indices);
+// ********************************************************
 void rindow_matlib_s_equal(int32_t n, float *x, int32_t incX, float *y, int32_t incY);
 void rindow_matlib_d_equal(int32_t n, double *x, int32_t incX, double *y, int32_t incY);
 void rindow_matlib_i_equal(int32_t dtype, int32_t n, void *x, int32_t incX, void *y, int32_t incY);
@@ -270,3 +275,32 @@ int32_t rindow_matlib_im2col3d(
     int32_t cols_channels_first,
     void* cols_data,int32_t cols_size
     );
+
+int32_t rindow_matlib_s_einsum(
+    int32_t depth,
+    int32_t *sizeOfIndices,
+    float *a,
+    int32_t ndimA,
+    int32_t *labelA,
+    float *b,
+    int32_t ndimB,
+    int32_t *labelB,
+    float *c,
+    int32_t ndimC,
+    int32_t *shapeA,
+    int32_t *shapeB
+);
+int32_t rindow_matlib_d_einsum(
+    int32_t depth,
+    int32_t *sizeOfIndices,
+    double *a,
+    int32_t ndimA,
+    int32_t *labelA,
+    double *b,
+    int32_t ndimB,
+    int32_t *labelB,
+    double *c,
+    int32_t ndimC,
+    int32_t *shapeA,
+    int32_t *shapeB
+);
