@@ -277,30 +277,62 @@ int32_t rindow_matlib_im2col3d(
     );
 
 int32_t rindow_matlib_s_einsum(
-    int32_t depth,
-    int32_t *sizeOfIndices,
-    float *a,
-    int32_t ndimA,
-    int32_t *labelA,
-    float *b,
-    int32_t ndimB,
-    int32_t *labelB,
+    const int32_t depth,
+    const int32_t *sizeOfIndices,
+    const float *a,
+    const int32_t *ldA,
+    const float *b,
+    const int32_t *ldB,
     float *c,
-    int32_t ndimC,
-    int32_t *shapeA,
-    int32_t *shapeB
+    const int32_t ndimC
 );
 int32_t rindow_matlib_d_einsum(
-    int32_t depth,
-    int32_t *sizeOfIndices,
-    double *a,
-    int32_t ndimA,
-    int32_t *labelA,
-    double *b,
-    int32_t ndimB,
-    int32_t *labelB,
+    const int32_t depth,
+    const int32_t *sizeOfIndices,
+    const double *a,
+    const int32_t *ldA,
+    const double *b,
+    const int32_t *ldB,
     double *c,
-    int32_t ndimC,
-    int32_t *shapeA,
-    int32_t *shapeB
+    const int32_t ndimC
+);
+int32_t rindow_matlib_s_einsum4p1(
+    int32_t dim0,
+    int32_t dim1,
+    int32_t dim2,
+    int32_t dim3,
+    int32_t dim4,
+    float *a,
+    int32_t ldA0,
+    int32_t ldA1,
+    int32_t ldA2,
+    int32_t ldA3,
+    int32_t ldA4,
+    float *b,
+    int32_t ldB0,
+    int32_t ldB1,
+    int32_t ldB2,
+    int32_t ldB3,
+    int32_t ldB4,
+    float *c
+);
+int32_t rindow_matlib_d_einsum4p1(
+    int32_t dim0,
+    int32_t dim1,
+    int32_t dim2,
+    int32_t dim3,
+    int32_t dim4,
+    double *a,
+    int32_t ldA0,
+    int32_t ldA1,
+    int32_t ldA2,
+    int32_t ldA3,
+    int32_t ldA4,
+    double *b,
+    int32_t ldB0,
+    int32_t ldB1,
+    int32_t ldB2,
+    int32_t ldB3,
+    int32_t ldB4,
+    double *c
 );

@@ -2364,31 +2364,51 @@ class MatlibTest extends TestCase
         ];
     }
 
+    public function einsum_build_lds(
+        array $sizeOfIndices,
+        array $label,
+        array $shape,
+    ) : array
+    {
+        $lds = array_fill(0,count($sizeOfIndices),0);
+        $ld = 1;
+        foreach(array_reverse($label,true) as $axis => $lbl) {
+            $broadcast = false;
+            if($shape[$axis]==1) {
+                $broadcast = true;
+            }
+            if(!$broadcast) {
+                $lds[$lbl] += $ld;
+            }
+            $ld *= $sizeOfIndices[$lbl];
+        }
+        return $lds;
+    }
 
     public function translate_einsum(
         string $equation,
-        NDArray ...$arrays,
+        NDArray $a,
+        NDArray $b,
     ) : array
     {
-        if(count($arrays)!=2) {
-            throw new InvalidArgumentException("Currently, only two array operations are supported.");
-        }
-        ///////////////////
-        // parse einsum string
-        ///////////////////
-        [
-            $sizeOfIndices,
-            $compiledLabels,
-            $outputShape,
-        ] = $this->parseEinsum($equation, ...$arrays);
-        [$a,$b] = $arrays;
-        [$labelA,$labelB,$labelC] = $compiledLabels;
+        $shapeA = $a->shape();
+        $shapeB = $b->shape();
+        $cacheKey = $equation;
+            [
+                $sizeOfIndices,
+                $compiledLabels,
+                $outputShape,
+            ] = $this->parseEinsum($equation, $a, $b);
+            [$labelA,$labelB,$labelC] = $compiledLabels;
+        $ldA = $this->einsum_build_lds($sizeOfIndices,$labelA,$shapeA);
+        $ldB = $this->einsum_build_lds($sizeOfIndices,$labelB,$shapeB);
+        $sizeOfIndices = $this->array($sizeOfIndices,dtype:NDArray::int32)->buffer();
+        $ldA = $this->array($ldA,dtype:NDArray::int32)->buffer();
+        $ldB = $this->array($ldB,dtype:NDArray::int32)->buffer();
+
         $outputs = $this->zeros($outputShape,dtype:$a->dtype());
         //$this->zeros($outputs);
 
-        $sizeOfIndices = $this->array($sizeOfIndices,dtype:NDArray::int32)->buffer();
-        $labelA = $this->array($labelA,dtype:NDArray::int32)->buffer();
-        $labelB = $this->array($labelB,dtype:NDArray::int32)->buffer();
         $AA = $a->buffer();
         $offsetA = $a->offset();
         $BB = $b->buffer();
@@ -2401,14 +2421,114 @@ class MatlibTest extends TestCase
             $sizeOfIndices,
             $AA,
             $offsetA,
-            $labelA,
+            $ldA,
             $BB,
             $offsetB,
-            $labelB,
+            $ldB,
             $CC,
             $offsetC,
             $ndimC,
             $outputs,
+        ];
+    }
+
+    public function translate_einsum4p1(
+        string $equation,
+        NDArray $a,
+        NDArray $b,
+        NDArray $c=null,
+    ) : array
+    {
+        $shapeA = $a->shape();
+        $shapeB = $b->shape();
+
+            [
+                $dims,
+                $compiledLabels,
+                $shapeC,
+            ] = $this->parseEinsum($equation, $a, $b);
+            [$labelA,$labelB,$labelC] = $compiledLabels;
+            $sumDims = count($dims)-count($labelC);
+            $inputMaxDims = 5-(1-$sumDims);
+            if(count($labelC)>4) {
+                throw new InvalidArgumentException("rank of C must be less than 4D or equal. (".implode(',',($dims?$dims:array_slice($dims,0,-$dims))).") given.");
+            }
+            if($sumDims>1) {
+                throw new InvalidArgumentException("rank of overlay dims must be less than 1D or equal. '{$equation}' and {$sumDims} sum dims given.");
+            }
+            if(count($dims)>$inputMaxDims) {
+                throw new InvalidArgumentException("dims must be less than {$inputMaxDims}D or equal.");
+            }
+            if(count($labelA)>$inputMaxDims) {
+                throw new InvalidArgumentException("rank of A must be less than {$inputMaxDims}D or equal. (".implode(',',$a->shape()).") given.");
+            }
+            if(count($labelB)>$inputMaxDims) {
+                throw new InvalidArgumentException("rank of B must be less than {$inputMaxDims}D or equal. (".implode(',',$b->shape()).") given.");
+            }
+
+        $ldA = $this->einsum_build_lds($dims,$labelA,$shapeA);
+        $ldB = $this->einsum_build_lds($dims,$labelB,$shapeB);
+    
+        if($c==null) {
+            $c = $this->zeros($shapeC,dtype:$a->dtype());
+        } else {
+            if($c->shape()!=$shapeC) {
+                throw new InvalidArgumentException(
+                    "unmatch shape of C. the shape must be (".implode(',',$shapeC)."). ".
+                    "(".implode(',',$c->shape()).") given.");
+            }
+        }
+        if($sumDims==0) {
+            $dims[] = 1;
+            $ldA[]  = 1;
+            $ldB[]  = 1;
+        }
+        //echo "equation=$equation\n";
+        //echo "labelA=(".implode(',',$labelA).")\n";
+        //echo "labelB=(".implode(',',$labelB).")\n";
+        //echo "labelC=(".implode(',',$labelC).")\n";
+        //echo "shapeC=(".implode(',',$shapeC).")\n";
+        //echo "dims=(".implode(',',$dims).")\n";
+        //echo "ldA=(".implode(',',$ldA).")\n";
+        //echo "ldB=(".implode(',',$ldB).")\n";
+        $dims = array_pad($dims,-5,1);
+        $ldA = array_pad($ldA,-5,0);
+        $ldB = array_pad($ldB,-5,0);
+        //echo "dims=(".implode(',',$dims).")\n";
+        //echo "ldA=(".implode(',',$ldA).")\n";
+        //echo "ldB=(".implode(',',$ldB).")\n";
+        [$dim0,$dim1,$dim2,$dim3,$dim4] = $dims;
+        [$ldA0,$ldA1,$ldA2,$ldA3,$ldA4] = $ldA;
+        [$ldB0,$ldB1,$ldB2,$ldB3,$ldB4] = $ldB;
+        $AA = $a->buffer();
+        $offsetA = $a->offset();
+        $BB = $b->buffer();
+        $offsetB = $b->offset();
+        $CC = $c->buffer();
+        $offsetC = $c->offset();
+        return [
+            $dim0,
+            $dim1,
+            $dim2,
+            $dim3,
+            $dim4,
+            $AA,
+            $offsetA,
+            $ldA0,
+            $ldA1,
+            $ldA2,
+            $ldA3,
+            $ldA4,
+            $BB,
+            $offsetB,
+            $ldB0,
+            $ldB1,
+            $ldB2,
+            $ldB3,
+            $ldB4,
+            $CC,
+            $offsetC,
+            $c,
         ];
     }
 
@@ -12729,10 +12849,10 @@ class MatlibTest extends TestCase
             $sizeOfIndices,
             $AA,
             $offsetA,
-            $labelA,
+            $ldA,
             $BB,
             $offsetB,
-            $labelB,
+            $ldB,
             $CC,
             $offsetC,
             $ndimC,
@@ -12743,10 +12863,10 @@ class MatlibTest extends TestCase
             $sizeOfIndices,
             $AA,
             $offsetA,
-            $labelA,
+            $ldA,
             $BB,
             $offsetB,
-            $labelB,
+            $ldB,
             $CC,
             $offsetC,
             $ndimC,
@@ -12756,6 +12876,57 @@ class MatlibTest extends TestCase
             [ 38,  44,  50,  56],
             [ 83,  98, 113, 128],
         ],$outputs->toArray());
+    }
+
+    /**
+    * @dataProvider providerDtypesFloats
+    */
+    public function testEinsum4p1Simple($params)
+    {
+        extract($params);
+        if($this->checkSkip('einsum4p1')){return;}
+
+        $matlib = $this->getMatlib();
+
+        $equation = 'ab,bc->ac';
+        $A = $this->array([
+            [1,2,3],
+            [4,5,6],
+        ],dtype:$dtype);
+        $B = $this->array([
+            [1,2,3,4],
+            [5,6,7,8],
+            [9,10,11,12],
+        ],dtype:$dtype);
+        [
+            $dim0,$dim1,$dim2,$dim3,$dim4,
+            $AA,
+            $offsetA,
+            $ldA0,$ldA1,$ldA2,$ldA3,$ldA4,
+            $BB,
+            $offsetB,
+            $ldB0,$ldB1,$ldB2,$ldB3,$ldB4,
+            $CC,
+            $offsetC,
+            $c,
+        ] = $this->translate_einsum4p1($equation,$A,$B);
+
+        $matlib->einsum4p1(
+            $dim0,$dim1,$dim2,$dim3,$dim4,
+            $AA,
+            $offsetA,
+            $ldA0,$ldA1,$ldA2,$ldA3,$ldA4,
+            $BB,
+            $offsetB,
+            $ldB0,$ldB1,$ldB2,$ldB3,$ldB4,
+            $CC,
+            $offsetC,
+        );
+
+        $this->assertEquals([
+            [ 38,  44,  50,  56],
+            [ 83,  98, 113, 128],
+        ],$c->toArray());
     }
 
 }

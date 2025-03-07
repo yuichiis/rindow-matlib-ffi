@@ -3017,20 +3017,21 @@ class Matlib
         }
     }
 
+    /**
+     * C = sum(A * B)
+     */
     public function einsum(
         Buffer $sizeOfIndices,
         Buffer $A,
         int $offsetA,
-        Buffer $labelA,
+        Buffer $ldA,
         Buffer $B,
         int $offsetB,
-        Buffer $labelB,
+        Buffer $ldB,
         Buffer $C,
         int $offsetC,
         int $ndimC,
-        Buffer $shapeA=null,
-        Buffer $shapeB=null,
-    )
+    ) : void
     {
         if($offsetA<0) {
             throw new InvalidArgumentException("Argument offsetA must be greater than or equals 0.");
@@ -3041,27 +3042,11 @@ class Matlib
         if($offsetC<0) {
             throw new InvalidArgumentException("Argument offsetC must be greater than or equals 0.");
         }
-        if($labelA->dtype()!=NDArray::int32) {
+        if($ldA->dtype()!=NDArray::int32) {
             throw new InvalidArgumentException('dtype of labelA must be int32.');
         }
-        if($labelB->dtype()!=NDArray::int32) {
+        if($ldB->dtype()!=NDArray::int32) {
             throw new InvalidArgumentException('dtype of labelB must be int32.');
-        }
-        if($shapeA!=null) {
-            if($shapeA->dtype()!=NDArray::int32) {
-                throw new InvalidArgumentException('dtype of shapeA must be int32.');
-            }
-            if(count($shapeA)!=count($labelA)) {
-                throw new InvalidArgumentException('size of shapeA must be the same to labelA.');
-            }
-        }
-        if($shapeB!=null) {
-            if($shapeB->dtype()!=NDArray::int32) {
-                throw new InvalidArgumentException('dtype of shapeB must be int32.');
-            }
-            if(count($shapeB)!=count($labelB)) {
-                throw new InvalidArgumentException('size of shapeB must be the same to labelB.');
-            }
         }
         // Check Buffer Types
         if($A->dtype()!=$B->dtype()||$A->dtype()!=$C->dtype()) {
@@ -3069,8 +3054,6 @@ class Matlib
         }
 
         $depth = count($sizeOfIndices);
-        $ndimA = count($labelA);
-        $ndimB = count($labelB);
 
         if($ndimC>$depth) {
             throw new InvalidArgumentException("ndimC must be less or equal size of SizeOfIndices.: {$ndimC} given.");
@@ -3082,23 +3065,17 @@ class Matlib
                 $pDataB = $B->addr($offsetB);
                 $pDataC = $C->addr($offsetC);
                 $pSizeOfIndices = $sizeOfIndices->addr(0);
-                $pLabelA = $labelA->addr(0);
-                $pLabelB = $labelB->addr(0);
-                $pShapeA = ($shapeA===null)? null : $shapeA->addr(0);
-                $pShapeB = ($shapeB===null)? null : $shapeB->addr(0);
+                $pLdA = $ldA->addr(0);
+                $pLdB = $ldB->addr(0);
                 $rc = $this->ffi->rindow_matlib_s_einsum(
                     $depth,
                     $pSizeOfIndices,
                     $pDataA,
-                    $ndimA,
-                    $pLabelA,
+                    $pLdA,
                     $pDataB,
-                    $ndimB,
-                    $pLabelB,
+                    $pLdB,
                     $pDataC,
                     $ndimC,
-                    $pShapeA,
-                    $pShapeB,
                 );
                 break;
             }
@@ -3107,23 +3084,17 @@ class Matlib
                 $pDataB = $B->addr($offsetB);
                 $pDataC = $C->addr($offsetC);
                 $pSizeOfIndices = $sizeOfIndices->addr(0);
-                $pLabelA = $labelA->addr(0);
-                $pLabelB = $labelB->addr(0);
-                $pShapeA = ($shapeA===null)? null : $shapeA->addr(0);
-                $pShapeB = ($shapeB===null)? null : $shapeB->addr(0);
+                $pLdA = $ldA->addr(0);
+                $pLdB = $ldB->addr(0);
                 $rc = $this->ffi->rindow_matlib_d_einsum(
                     $depth,
                     $pSizeOfIndices,
                     $pDataA,
-                    $ndimA,
-                    $pLabelA,
+                    $pLdA,
                     $pDataB,
-                    $ndimB,
-                    $pLabelB,
+                    $pLdB,
                     $pDataC,
                     $ndimC,
-                    $pShapeA,
-                    $pShapeB,
                 );
                 break;
             }
@@ -3132,17 +3103,138 @@ class Matlib
             }
         }
         if($rc) {
-            $error = -$rc;
-            $chrA = ord('a')-1;
-            $where = chr($chrA+intdiv($error,1000));
-            $error = $error % 1000;
-                        
-            switch($error) {
-                case 1: {
-                    throw new InvalidArgumentException("label number is too large in label{$where}.");
+            switch($rc) {
+                case self::E_MEM_ALLOC_FAILURE: {
+                    throw new RuntimeException("memory allocation failure");
                 }
-                case 2: {
-                    throw new InvalidArgumentException("indicator number is too large when computing index of {$where}.");
+                case self::E_INVALID_SHAPE_OR_PARAM: {
+                    throw new InvalidArgumentException("Invalid shape or parameters.");
+                }
+                default: {
+                    throw new RuntimeException(sprintf("Unkown Error (%d)", $rc));
+                }
+            }
+        }
+    }
+
+    /**
+     * C = sum(A * B)
+     */
+    public function einsum4p1(
+        int $dim0,
+        int $dim1,
+        int $dim2,
+        int $dim3,
+        int $dim4,
+        Buffer $A,
+        int $offsetA,
+        int $ldA0,
+        int $ldA1,
+        int $ldA2,
+        int $ldA3,
+        int $ldA4,
+        Buffer $B,
+        int $offsetB,
+        int $ldB0,
+        int $ldB1,
+        int $ldB2,
+        int $ldB3,
+        int $ldB4,
+        Buffer $C,
+        int $offsetC,
+    ) : void
+    {
+        if($offsetA<0) {
+            throw new InvalidArgumentException("Argument offsetA must be greater than or equals 0.");
+        }
+        if($offsetB<0) {
+            throw new InvalidArgumentException("Argument offsetB must be greater than or equals 0.");
+        }
+        if($offsetC<0) {
+            throw new InvalidArgumentException("Argument offsetC must be greater than or equals 0.");
+        }
+        $maxA = $ldA0*($dim0-1)+$ldA1*($dim1-1)+$ldA2*($dim2-1)+$ldA3*($dim3-1)+$ldA4*($dim4-1);
+        $maxB = $ldB0*($dim0-1)+$ldB1*($dim1-1)+$ldB2*($dim2-1)+$ldB3*($dim3-1)+$ldB4*($dim4-1);
+        $maxC = $dim0*$dim1*$dim2*$dim3-1;
+
+        if(count($A) <= $offsetA+$maxA) {
+            throw new InvalidArgumentException('Matrix specification too large for buffer A.');
+        }
+        if(count($B) <= $offsetB+$maxB) {
+            throw new InvalidArgumentException('Matrix specification too large for buffer B.');
+        }
+        if(count($C) <= $offsetC+$maxC) {
+            echo "sizeC=".count($C)."\n";
+            echo "maxC=$maxC\n";
+            throw new InvalidArgumentException('Matrix specification too large for buffer C.');
+        }
+
+        // Check Buffer Types
+        if($A->dtype()!=$B->dtype()||$A->dtype()!=$C->dtype()) {
+            throw new InvalidArgumentException('dtype of arrays must be the same.');
+        }
+
+        switch ($A->dtype()) {
+            case NDArray::float32: {
+                $pDataA = $A->addr($offsetA);
+                $pDataB = $B->addr($offsetB);
+                $pDataC = $C->addr($offsetC);
+                $rc = $this->ffi->rindow_matlib_s_einsum4p1(
+                    $dim0,
+                    $dim1,
+                    $dim2,
+                    $dim3,
+                    $dim4,
+                    $pDataA,
+                    $ldA0,
+                    $ldA1,
+                    $ldA2,
+                    $ldA3,
+                    $ldA4,
+                    $pDataB,
+                    $ldB0,
+                    $ldB1,
+                    $ldB2,
+                    $ldB3,
+                    $ldB4,
+                    $pDataC,
+                );
+                break;
+            }
+            case NDArray::float64: {
+                $pDataA = $A->addr($offsetA);
+                $pDataB = $B->addr($offsetB);
+                $pDataC = $C->addr($offsetC);
+                $rc = $this->ffi->rindow_matlib_d_einsum4p1(
+                    $dim0,
+                    $dim1,
+                    $dim2,
+                    $dim3,
+                    $dim4,
+                    $pDataA,
+                    $ldA0,
+                    $ldA1,
+                    $ldA2,
+                    $ldA3,
+                    $ldA4,
+                    $pDataB,
+                    $ldB0,
+                    $ldB1,
+                    $ldB2,
+                    $ldB3,
+                    $ldB4,
+                    $pDataC,
+                );
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException("Unsupported data type.");
+            }
+        }
+        if($rc) {
+            switch($rc) {
+                case self::E_INVALID_SHAPE_OR_PARAM: {
+                    throw new InvalidArgumentException("Invalid shape or parameters.");
                 }
                 default: {
                     throw new RuntimeException(sprintf("Unkown Error (%d)", $rc));
