@@ -35,8 +35,8 @@ class Range
 
     public function __construct(
         int|float $limit,
-        int|float $start=null,
-        int|float $delta=null)
+        int|float|null $start=null,
+        int|float|null $delta=null)
     {
         $this->limit = $limit;
         $this->start = $start ?? 0;
@@ -68,7 +68,7 @@ class MatlibTest extends TestCase
         return $matlib;
     }
 
-    public function zeros(array $shape,int $dtype=null)
+    public function zeros(array $shape,?int $dtype=null)
     {
         $ndarray = $this->array(null,$dtype,$shape);
         $buffer = $ndarray->buffer();
@@ -79,7 +79,7 @@ class MatlibTest extends TestCase
         return $ndarray;
     }
 
-    public function ones(array $shape,int $dtype=null)
+    public function ones(array $shape,?int $dtype=null)
     {
         $ndarray = $this->array(null,$dtype,$shape);
         $buffer = $ndarray->buffer();
@@ -122,7 +122,7 @@ class MatlibTest extends TestCase
         return $array;
     }
 
-    public function array(int|float|array $array=null, int $dtype=null, array $shape=null) : object
+    public function array(int|float|array|null $array=null, ?int $dtype=null, ?array $shape=null) : object
     {
         $ndarray = new class ($array, $dtype, $shape) implements NDArray {
             protected object $buffer;
@@ -130,7 +130,7 @@ class MatlibTest extends TestCase
             protected int $dtype;
             protected int $offset;
             protected array $shape;
-            public function __construct(int|float|array|Buffer $array=null, int $dtype=null, array $shape=null, int $offset=null) {
+            public function __construct(int|float|array|Buffer|null $array=null, ?int $dtype=null, ?array $shape=null, ?int $offset=null) {
                 $dtype = $dtype ?? NDArray::float32;
                 $offset = $offset ?? 0;
                 if(is_array($array)||$array instanceof ArrayObject) {
@@ -417,8 +417,8 @@ class MatlibTest extends TestCase
 
     public function translate_increment(
         NDArray $X,
-        float $beta=null,
-        float $alpha=null) : array
+        ?float $beta=null,
+        ?float $alpha=null) : array
     {
         $N = $X->size();
         $XX = $X->buffer();
@@ -465,7 +465,7 @@ class MatlibTest extends TestCase
     public function translate_multiply(
        NDArray $X,
        NDArray $A,
-       bool $trans=null
+       ?bool $trans=null
        ) : array
     {
         if($trans===null)
@@ -505,8 +505,8 @@ class MatlibTest extends TestCase
     public function translate_add(
        NDArray $X,
        NDArray $A,
-       float $alpha=null,
-       bool $trans=null
+       ?float $alpha=null,
+       ?bool $trans=null
        ) : array
     {
         if($trans===null)
@@ -547,7 +547,7 @@ class MatlibTest extends TestCase
     }
 
     public function translate_duplicate(
-        NDArray $X, int $n=null, bool $trans=null,NDArray $A=null) : array
+        NDArray $X, ?int $n=null, ?bool $trans=null, ?NDArray $A=null) : array
     {
         if($trans===null)
             $trans = false;
@@ -594,9 +594,9 @@ class MatlibTest extends TestCase
 
     public function translate_matrixcopy(
         NDArray $A,
-        bool $trans=null,
-        float $alpha=null,
-        NDArray $B=null
+        ?bool $trans=null,
+        ?float $alpha=null,
+        ?NDArray $B=null
          ) : array
     {
         $trans = $trans ?? false;
@@ -636,13 +636,13 @@ class MatlibTest extends TestCase
 
     public function translate_imagecopy(
         NDArray $A,
-        NDArray $B=null,
-        bool $channels_first=null,
-        int $heightShift=null,
-        int $widthShift=null,
-        bool $verticalFlip=null,
-        bool $horizontalFlip=null,
-        bool $rgbFlip=null
+        ?NDArray $B=null,
+        ?bool $channels_first=null,
+        ?int $heightShift=null,
+        ?int $widthShift=null,
+        ?bool $verticalFlip=null,
+        ?bool $horizontalFlip=null,
+        ?bool $rgbFlip=null
         ) : array
     {
         if($A->ndim()!=3) {
@@ -708,7 +708,7 @@ class MatlibTest extends TestCase
     public function translate_pow(
        NDArray $A,
        NDArray $alpha,
-       bool $trans=null
+       ?bool $trans=null
        ) : array
     {
         if($trans===null) {
@@ -909,9 +909,9 @@ class MatlibTest extends TestCase
         bool $scatterAdd,
         NDArray $A,
         NDArray $X,
-        int $axis=null,
-        NDArray $B=null,
-        $dtype=null) : array
+        ?int $axis=null,
+        ?NDArray $B=null,
+        ?int $dtype=null) : array
     {
 //echo "shapeX=[".implode(',',$X->shape())."],shapeA=[".implode(',',$A->shape())."]\n";
         if($axis===null) {
@@ -1000,9 +1000,9 @@ class MatlibTest extends TestCase
         NDArray $X,
         NDArray $A,
         int $numClass,
-        int $axis=null,
-        NDArray $B=null,
-        $dtype=null) : array
+        ?int $axis=null,
+        ?NDArray $B=null,
+        ?int $dtype=null) : array
     {
 //echo "shapeX=[".implode(',',$X->shape())."],shapeA=[".implode(',',$A->shape())."]\n";
 //echo "axis=$axis,numClass=$numClass\n";
@@ -1186,8 +1186,8 @@ class MatlibTest extends TestCase
         bool $addMode,
         NDArray $A, 
         NDarray $X,
-        int $batchDims=null,
-        NDArray $B=null,
+        ?int $batchDims=null,
+        ?NDArray $B=null,
     ) : array
     {
         $batchDims ??= 0;
@@ -1257,8 +1257,8 @@ class MatlibTest extends TestCase
     public function translate_gatherND(
         NDArray $params, 
         NDarray $indices,
-        int $batchDims=null,
-        NDArray $outputs=null,
+        ?int $batchDims=null,
+        ?NDArray $outputs=null,
     ) : array
     {
         return $this->doGatherND(
@@ -1280,8 +1280,8 @@ class MatlibTest extends TestCase
         NDarray $indices,
         NDArray $updates,
         array $shape,
-        int $batchDims=null,
-        NDArray $outputs=null,
+        ?int $batchDims=null,
+        ?NDArray $outputs=null,
     ) : array
     {
         if($outputs==null) {
@@ -1307,8 +1307,8 @@ class MatlibTest extends TestCase
         NDarray $indices,
         NDArray $updates,
         array $shape,
-        int $batchDims=null,
-        NDArray $outputs=null,
+        ?int $batchDims=null,
+        ?NDArray $outputs=null,
     ) : array
     {
         if($outputs==null) {
@@ -1336,11 +1336,11 @@ class MatlibTest extends TestCase
         bool $addMode,
         NDArray $A,
         NDarray $X,
-        int $axis=null,
-        int $batchDims=null,
-        int $detailDepth=null,
-        int $indexDepth=null,
-        NDArray $B=null,
+        ?int $axis=null,
+        ?int $batchDims=null,
+        ?int $detailDepth=null,
+        ?int $indexDepth=null,
+        ?NDArray $B=null,
     ) : array {
         $batchDims ??= 0;
         if($batchDims<0) {
@@ -1472,11 +1472,11 @@ class MatlibTest extends TestCase
     public function translate_gatherb(
         NDArray $params,
         NDarray $indices,
-        int $axis=null,
-        int $batchDims=null,
-        int $detailDepth=null,
-        int $indexDepth=null,
-        NDArray $outputs=null,
+        ?int $axis=null,
+        ?int $batchDims=null,
+        ?int $detailDepth=null,
+        ?int $indexDepth=null,
+        ?NDArray $outputs=null,
     ) : array {
         return $this->doGatherb(
             $reverse=false,
@@ -1501,11 +1501,11 @@ class MatlibTest extends TestCase
         NDarray $indices,
         NDArray $updates,
         array $shape,
-        int $axis=null,
-        int $batchDims=null,
-        int $detailDepth=null,
-        int $indexDepth=null,
-        NDArray $outputs=null,
+        ?int $axis=null,
+        ?int $batchDims=null,
+        ?int $detailDepth=null,
+        ?int $indexDepth=null,
+        ?NDArray $outputs=null,
     ): array
     {
         if($outputs==null) {
@@ -1535,11 +1535,11 @@ class MatlibTest extends TestCase
         NDarray $indices,
         NDArray $updates,
         array $shape,
-        int $axis=null,
-        int $batchDims=null,
-        int $detailDepth=null,
-        int $indexDepth=null,
-        NDArray $outputs=null,
+        ?int $axis=null,
+        ?int $batchDims=null,
+        ?int $detailDepth=null,
+        ?int $indexDepth=null,
+        ?NDArray $outputs=null,
     ) : array
     {
         if($outputs==null) {
@@ -1564,7 +1564,7 @@ class MatlibTest extends TestCase
         NDArray $input,
         array $begin,
         array $size,
-        NDArray $output=null
+        ?NDArray $output=null
         ) : array
     {
         if(!$reverse){
@@ -1697,8 +1697,8 @@ class MatlibTest extends TestCase
     }
 
     public function translate_repeat(
-        NDArray $A, int $repeats, int $axis=null,bool $keepdims=null,
-        NDArray $output=null)
+        NDArray $A, int $repeats, ?int $axis=null, ?bool $keepdims=null,
+        ?NDArray $output=null)
     {
         if($repeats<1) {
             throw new InvalidArgumentException('repeats argument must be one or greater.');
@@ -1760,8 +1760,8 @@ class MatlibTest extends TestCase
     public function translate_onehot(
         NDArray $X,
         int $numClass,
-        float $a=null,
-        NDArray $Y=null) : array
+        ?float $a=null,
+        ?NDArray $Y=null) : array
     {
         if($X->ndim()!=1) {
             throw new InvalidArgumentException('"X" must be 1D-NDArray.');
@@ -1798,9 +1798,9 @@ class MatlibTest extends TestCase
 
     public function translate_reduceSum(
         NDArray $A,
-        int $axis=null,
-        NDArray $B=null,
-        $dtype=null) : array
+        ?int $axis=null,
+        ?NDArray $B=null,
+        ?int $dtype=null) : array
     {
         $ndim = $A->ndim();
         if($axis<0) {
@@ -1861,9 +1861,9 @@ class MatlibTest extends TestCase
     public function translate_searchsorted(
         NDArray $A,
         NDArray $X,
-        bool $right=null,
-        $dtype=null,
-        NDArray $Y=null
+        ?bool $right=null,
+        ?int $dtype=null,
+        ?NDArray $Y=null
         ) : array
     {
         if($A->ndim()==1) {
@@ -1922,9 +1922,9 @@ class MatlibTest extends TestCase
 
     public function translate_cumsum(
         NDArray $X,
-        bool $exclusive=null,
-        bool $reverse=null,
-        NDArray $Y=null
+        ?bool $exclusive=null,
+        ?bool $reverse=null,
+        ?NDArray $Y=null
         ) : array
     {
         if($exclusive===null) {
@@ -1957,10 +1957,10 @@ class MatlibTest extends TestCase
 
     public function translate_cumsumb(
         NDArray $inputs,
-        int $axis=null,
-        bool $exclusive=null,
-        bool $reverse=null,
-        NDArray $outputs=null
+        ?int $axis=null,
+        ?bool $exclusive=null,
+        ?bool $reverse=null,
+        ?NDArray $outputs=null
         ) : array
     {
         $ndim = $inputs->ndim();
@@ -2054,9 +2054,9 @@ class MatlibTest extends TestCase
         array $shape,
         $low,
         $high,
-        int $dtype=null,
-        int $seed=null,
-        NDArray $output=null) : array
+        ?int $dtype=null,
+        ?int $seed=null,
+        ?NDArray $output=null) : array
     {
         $X = $output;
         if($dtype!==null&&$X!==null) {
@@ -2095,9 +2095,9 @@ class MatlibTest extends TestCase
         array $shape,
         $mean,
         $scale,
-        int $dtype=null,
-        int $seed=null,
-        NDArray $output=null) : array
+        ?int $dtype=null,
+        ?int $seed=null,
+        ?NDArray $output=null) : array
     {
         $X = $output;
         if($dtype!==null&&$X!==null) {
@@ -2134,10 +2134,10 @@ class MatlibTest extends TestCase
     
     public function translate_randomSequence(
         int $base,
-        int $size=null,
-        int $seed=null,
-        int $dtype=null,
-        NDArray $output=null,
+        ?int $size=null,
+        ?int $seed=null,
+        ?int $dtype=null,
+        ?NDArray $output=null,
         ) : array
     {
         $X = $output;
@@ -2174,10 +2174,10 @@ class MatlibTest extends TestCase
     public function translate_masking(
         NDArray $mask,
         NDArray $data,
-        int $batchDims=null,
-        int $axis=null,
-        float $fill=null,
-        int $mode=null
+        ?int $batchDims=null,
+        ?int $axis=null,
+        ?float $fill=null,
+        ?int $mode=null
         ) : array
     {
 
@@ -2436,7 +2436,7 @@ class MatlibTest extends TestCase
         string $equation,
         NDArray $a,
         NDArray $b,
-        NDArray $c=null,
+        ?NDArray $c=null,
     ) : array
     {
         $shapeA = $a->shape();
