@@ -56,8 +56,8 @@ jobs:
       - name: Setup Matlib (Linux)
         if: ${{ startsWith(matrix.os, 'ubuntu-') }}
         run: |
-          wget https://github.com/${repository}/releases/download/${testlib}/rindow-matlib_${matlib}_amd64.deb
-          sudo apt install -y ./rindow-matlib_${matlib}_amd64.deb
+          wget https://github.com/${repository}/releases/download/${testlib}/rindow-matlib_${matlib}-`lsb_release -sr`_amd64.deb
+          sudo apt install -y ./rindow-matlib_${matlib}-`lsb_release -sr`_amd64.deb
 
         #    sudo update-alternatives --set librindowmatlib.so /usr/lib/rindowmatlib-serial/librindowmatlib.so
 
