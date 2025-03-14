@@ -2,6 +2,7 @@
 namespace RindowTest\Matlib\FFI\MatlibTest;
 
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Interop\Polite\Math\Matrix\NDArray;
 use Interop\Polite\Math\Matrix\BLAS;
 use Rindow\Math\Buffer\FFI\Buffer;
@@ -2890,9 +2891,7 @@ class MatlibTest extends TestCase
         $min = $matlib->sum($N,$XX,$offX,$incX);
     }
  
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testMinNormal($params)
     {
         extract($params);
@@ -3019,9 +3018,7 @@ class MatlibTest extends TestCase
         $min = $matlib->imin($N,$XX,$offX,$incX);
     }
  
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testMaxNormal($params)
     {
         extract($params);
@@ -3147,9 +3144,7 @@ class MatlibTest extends TestCase
         $min = $matlib->imax($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testIncrementNormal($params)
     {
         extract($params);
@@ -3278,9 +3273,7 @@ class MatlibTest extends TestCase
         $matlib->increment($N,$alpha,$XX,$offX,$incX,$beta);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testReciprocalNormal($params)
     {
         extract($params);
@@ -3415,9 +3408,7 @@ class MatlibTest extends TestCase
         $matlib->reciprocal($N,$alpha,$XX,$offX,$incX,$beta);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testMaximumNormal($params)
     {
         extract($params);
@@ -3642,9 +3633,7 @@ class MatlibTest extends TestCase
         $matlib->maximum($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testMinimumNormal($params)
     {
         extract($params);
@@ -3869,9 +3858,7 @@ class MatlibTest extends TestCase
         $matlib->minimum($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
     
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testGreaterNormal($params)
     {
         extract($params);
@@ -4096,9 +4083,7 @@ class MatlibTest extends TestCase
         $matlib->greater($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testGreaterEqualNormal($params)
     {
         extract($params);
@@ -4113,9 +4098,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([[0,0],[1,1],[1,1]],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testLessNormal($params)
     {
         extract($params);
@@ -4340,9 +4323,7 @@ class MatlibTest extends TestCase
         $matlib->less($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testLessEqualNormal($params)
     {
         extract($params);
@@ -4357,9 +4338,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([[1,1],[1,1],[0,0]],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testMultiplySameSizeNormal($params)
     {
         extract($params);
@@ -4376,9 +4355,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([10,200,3000],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testMultiplyBroadcastNormal($params)
     {
         extract($params);
@@ -4648,9 +4625,7 @@ class MatlibTest extends TestCase
         $matlib->multiply($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testaddSameSizeNormal($params)
     {
         extract($params);
@@ -4669,9 +4644,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([9,98,997],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testaddBroadcastNormal($params)
     {
         extract($params);
@@ -4941,9 +4914,7 @@ class MatlibTest extends TestCase
         $matlib->add($trans,$M,$N,$alpha,$XX,$offX,$incX,$AA,$offA,$ldA);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testDuplicateSameSizeNormal($params)
     {
         extract($params);
@@ -4960,9 +4931,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,2,3],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testDuplicateBroadcastNormal($params)
     {
         extract($params);
@@ -5232,9 +5201,7 @@ class MatlibTest extends TestCase
         $matlib->duplicate($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testSquareNormal($params)
     {
         extract($params);
@@ -5346,9 +5313,7 @@ class MatlibTest extends TestCase
         $matlib->square($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testsqrtNormal($params)
     {
         extract($params);
@@ -5479,9 +5444,7 @@ class MatlibTest extends TestCase
         $matlib->sqrt($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testrsqrtNormal($params)
     {
         extract($params);
@@ -5641,9 +5604,7 @@ class MatlibTest extends TestCase
         $matlib->rsqrt($N,$alpha,$XX,$offX,$incX,$beta);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testPowSameSizeNormal($params)
     {
         extract($params);
@@ -5660,9 +5621,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,8,9],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testPowBroadcastNormal($params)
     {
         extract($params);
@@ -5932,9 +5891,7 @@ class MatlibTest extends TestCase
         $matlib->pow($trans,$M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);;
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testexpNormal($params)
     {
         extract($params);
@@ -6048,9 +6005,7 @@ class MatlibTest extends TestCase
         $matlib->exp($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testlogNormal($params)
     {
         extract($params);
@@ -6188,9 +6143,7 @@ class MatlibTest extends TestCase
         $matlib->log($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testtanhNormal($params)
     {
         extract($params);
@@ -6309,9 +6262,7 @@ class MatlibTest extends TestCase
         $matlib->tanh($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testsinNormal($params)
     {
         extract($params);
@@ -6416,9 +6367,7 @@ class MatlibTest extends TestCase
         $matlib->sin($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testcosNormal($params)
     {
         extract($params);
@@ -6537,9 +6486,7 @@ class MatlibTest extends TestCase
         $matlib->cos($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testtanNormal($params)
     {
         extract($params);
@@ -6658,9 +6605,7 @@ class MatlibTest extends TestCase
         $matlib->tan($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testfillNormal($params)
     {
         extract($params);
@@ -6673,9 +6618,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,1,1,1],$X->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testnan2numNormal($params)
     {
         extract($params);
@@ -6694,9 +6637,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,2,4,1],$X->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testisnanNormal($params)
     {
         extract($params);
@@ -6711,9 +6652,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,0,0,1],$X->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testsearchsortedNormal($params)
     {
         extract($params);
@@ -7088,9 +7027,7 @@ class MatlibTest extends TestCase
         $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testcumsumNormal($params)
     {
         extract($params);
@@ -7343,9 +7280,7 @@ class MatlibTest extends TestCase
         $matlib->cumsum($n,$XX,$offsetX,$incX,$exclusive,$reverse,$YY,$offsetY,$incY);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testcumsumbNormal($params)
     {
         extract($params);
@@ -7427,9 +7362,7 @@ class MatlibTest extends TestCase
         //$this->assertEquals(1.0,$Y[3]);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testcumsumbWithAxis($params)
     {
         extract($params);
@@ -7549,9 +7482,7 @@ class MatlibTest extends TestCase
     }
 
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testzerosNormal($params)
     {
         extract($params);
@@ -7664,9 +7595,7 @@ class MatlibTest extends TestCase
         $matlib->zeros($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger32
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger32')]
     public function testTranspose1DNormal($params)
     {
         extract($params);
@@ -7691,9 +7620,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,2,4,9],$B->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger32
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger32')]
     public function testTranspose2DNormal($params)
     {
         extract($params);
@@ -7718,9 +7645,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([[1,4],[2,5],[3,6]],$B->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger32
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger32')]
     public function testTranspose3DNormal($params)
     {
         extract($params);
@@ -7768,9 +7693,7 @@ class MatlibTest extends TestCase
         ],$B->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger32
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger32')]
     public function testTranspose3DWithPerm($params)
     {
         extract($params);
@@ -8378,9 +8301,7 @@ class MatlibTest extends TestCase
          ],$origB->toArray());
     }
     
-    /**
-    * @dataProvider providerDtypesFloatsAndAllInteger
-    */
+    #[DataProvider('providerDtypesFloatsAndAllInteger')]
     public function testBandpartNormal($params)
     {
         extract($params);
@@ -8675,9 +8596,7 @@ class MatlibTest extends TestCase
     //    );
     //}
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testTopkNormal($params)
     {
         extract($params);
@@ -8741,9 +8660,7 @@ class MatlibTest extends TestCase
 
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testTopkLarge($params)
     {
         extract($params);
@@ -8812,9 +8729,7 @@ class MatlibTest extends TestCase
         $this->assertTrue(true);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testTopkWithoutSorted($params)
     {
         extract($params);
@@ -8904,9 +8819,7 @@ class MatlibTest extends TestCase
         }
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger326w3246indexes
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger326w3246indexes')]
     public function testGatherAxisNullNormal($params)
     {
         extract($params);
@@ -8933,9 +8846,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,3],$B->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger326w3246indexes
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger326w3246indexes')]
     public function testGatherAxisNullAddMode($params)
     {
         extract($params);
@@ -8964,9 +8875,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([2,4],$B->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger326w3246indexes
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger326w3246indexes')]
     public function testGatherAxisNullReverse($params)
     {
         extract($params);
@@ -9282,9 +9191,7 @@ class MatlibTest extends TestCase
         $matlib->gather($reverse,$addMode,$n,$k,$numClass,$XX,$offX,$AA,$offA,$BB,$offB);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testReduceGatherAxis1Normal($params)
     {
         extract($params);
@@ -11062,9 +10969,7 @@ class MatlibTest extends TestCase
 
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger8
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger8')]
     public function testsliceNormal($params)
     {
         extract($params);
@@ -11181,9 +11086,7 @@ class MatlibTest extends TestCase
         ],$y->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testRepeatNormal($params)
     {
         extract($params);
@@ -11224,9 +11127,7 @@ class MatlibTest extends TestCase
         ],$Y->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testupdateAddOnehotNormal($params)
     {
         extract($params);
@@ -11479,9 +11380,7 @@ class MatlibTest extends TestCase
         $matlib->updateAddOnehot($m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testreduceSumSameSizeNormal($params)
     {
         extract($params);
@@ -11498,9 +11397,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([6,15],$X->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testreduceSumBroadcastTranspose($params)
     {
         extract($params);
@@ -12071,9 +11968,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([-1,0,1,2,3],$Y->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testreduceMaxSameSizeNormal($params)
     {
         extract($params);
@@ -12090,9 +11985,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([3,6],$X->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testmatrixcopyNormal($params)
     {
         extract($params);
@@ -12117,9 +12010,7 @@ class MatlibTest extends TestCase
         ],$B->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testImagecopyNormal($params)
     {
         extract($params);
@@ -12165,9 +12056,7 @@ class MatlibTest extends TestCase
         ],$b->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testreduceArgMaxSameSizeNormal($params)
     {
         extract($params);
@@ -12300,9 +12189,7 @@ class MatlibTest extends TestCase
         $this->assertEquals(-1,$min);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testRandomNormal($params)
     {
         extract($params);
@@ -12409,9 +12296,7 @@ class MatlibTest extends TestCase
             $y->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testIm2col1dNormal($params)
     {
         extract($params);
@@ -12452,9 +12337,7 @@ class MatlibTest extends TestCase
             $cols->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testIm2col2dNormal($params)
     {
         extract($params);
@@ -12547,9 +12430,7 @@ class MatlibTest extends TestCase
         );
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testIm2col3dNormal($params)
     {
         extract($params);
@@ -12690,9 +12571,7 @@ class MatlibTest extends TestCase
     //}
 //
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger3264
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger3264')]
     public function testMaskingSameSizeNormal($params)
     {
         extract($params);
@@ -12709,9 +12588,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([10,0,1000],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger3264
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger326w3246indexes')]
     public function testMaskingBroadcastWithGapAndLenNormal($params)
     {
         extract($params);
@@ -12754,9 +12631,7 @@ class MatlibTest extends TestCase
         ],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger3264
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger326w3246indexes')]
     public function testMaskingMaskIsNotBoolType($params)
     {
         extract($params);
@@ -12774,9 +12649,7 @@ class MatlibTest extends TestCase
         $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger3264
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger326w3246indexes')]
     public function testMaskingAddMode($params)
     {
         extract($params);
@@ -12825,9 +12698,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([true,false,true, true, true, true ],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testEinsumSimple($params)
     {
         extract($params);
@@ -12878,9 +12749,7 @@ class MatlibTest extends TestCase
         ],$outputs->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testEinsum4p1Simple($params)
     {
         extract($params);
