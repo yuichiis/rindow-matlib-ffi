@@ -18,7 +18,7 @@ Requirements
 ============
 
 - PHP 8.1 or PHP8.2 or PHP8.3 or PHP8.4
-- Rindow Matlib C Library(Windows 10/11 or Linux(Ubuntu 20.04~ or Debian 12~) or later)
+- Rindow Matlib C Library 1.1 or later
 
 
 How to setup
