@@ -2,6 +2,7 @@
 namespace RindowTest\Matlib\FFI\MatlibTest;
 
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Interop\Polite\Math\Matrix\NDArray;
 use Interop\Polite\Math\Matrix\BLAS;
 use Rindow\Math\Buffer\FFI\Buffer;
@@ -35,8 +36,8 @@ class Range
 
     public function __construct(
         int|float $limit,
-        int|float $start=null,
-        int|float $delta=null)
+        int|float|null $start=null,
+        int|float|null $delta=null)
     {
         $this->limit = $limit;
         $this->start = $start ?? 0;
@@ -68,7 +69,7 @@ class MatlibTest extends TestCase
         return $matlib;
     }
 
-    public function zeros(array $shape,int $dtype=null)
+    public function zeros(array $shape,?int $dtype=null)
     {
         $ndarray = $this->array(null,$dtype,$shape);
         $buffer = $ndarray->buffer();
@@ -79,13 +80,18 @@ class MatlibTest extends TestCase
         return $ndarray;
     }
 
-    public function ones(array $shape,int $dtype=null)
+    public function ones(array $shape,?int $dtype=null)
     {
         $ndarray = $this->array(null,$dtype,$shape);
         $buffer = $ndarray->buffer();
         $size = $buffer->count();
+        if($dtype==NDArray::bool) {
+            $value = true;
+        } else {
+            $value = 1;
+        }
         for($i=0;$i<$size;$i++) {
-            $buffer[$i] = 1;
+            $buffer[$i] = $value;
         }
         return $ndarray;
     }
@@ -117,7 +123,7 @@ class MatlibTest extends TestCase
         return $array;
     }
 
-    public function array(int|float|array $array=null, int $dtype=null, array $shape=null) : object
+    public function array(int|float|array|null $array=null, ?int $dtype=null, ?array $shape=null) : object
     {
         $ndarray = new class ($array, $dtype, $shape) implements NDArray {
             protected object $buffer;
@@ -125,7 +131,7 @@ class MatlibTest extends TestCase
             protected int $dtype;
             protected int $offset;
             protected array $shape;
-            public function __construct(int|float|array|Buffer $array=null, int $dtype=null, array $shape=null, int $offset=null) {
+            public function __construct(int|float|array|Buffer|null $array=null, ?int $dtype=null, ?array $shape=null, ?int $offset=null) {
                 $dtype = $dtype ?? NDArray::float32;
                 $offset = $offset ?? 0;
                 if(is_array($array)||$array instanceof ArrayObject) {
@@ -412,8 +418,8 @@ class MatlibTest extends TestCase
 
     public function translate_increment(
         NDArray $X,
-        float $beta=null,
-        float $alpha=null) : array
+        ?float $beta=null,
+        ?float $alpha=null) : array
     {
         $N = $X->size();
         $XX = $X->buffer();
@@ -460,7 +466,7 @@ class MatlibTest extends TestCase
     public function translate_multiply(
        NDArray $X,
        NDArray $A,
-       bool $trans=null
+       ?bool $trans=null
        ) : array
     {
         if($trans===null)
@@ -500,8 +506,8 @@ class MatlibTest extends TestCase
     public function translate_add(
        NDArray $X,
        NDArray $A,
-       float $alpha=null,
-       bool $trans=null
+       ?float $alpha=null,
+       ?bool $trans=null
        ) : array
     {
         if($trans===null)
@@ -542,7 +548,7 @@ class MatlibTest extends TestCase
     }
 
     public function translate_duplicate(
-        NDArray $X, int $n=null, bool $trans=null,NDArray $A=null) : array
+        NDArray $X, ?int $n=null, ?bool $trans=null, ?NDArray $A=null) : array
     {
         if($trans===null)
             $trans = false;
@@ -589,9 +595,9 @@ class MatlibTest extends TestCase
 
     public function translate_matrixcopy(
         NDArray $A,
-        bool $trans=null,
-        float $alpha=null,
-        NDArray $B=null
+        ?bool $trans=null,
+        ?float $alpha=null,
+        ?NDArray $B=null
          ) : array
     {
         $trans = $trans ?? false;
@@ -631,13 +637,13 @@ class MatlibTest extends TestCase
 
     public function translate_imagecopy(
         NDArray $A,
-        NDArray $B=null,
-        bool $channels_first=null,
-        int $heightShift=null,
-        int $widthShift=null,
-        bool $verticalFlip=null,
-        bool $horizontalFlip=null,
-        bool $rgbFlip=null
+        ?NDArray $B=null,
+        ?bool $channels_first=null,
+        ?int $heightShift=null,
+        ?int $widthShift=null,
+        ?bool $verticalFlip=null,
+        ?bool $horizontalFlip=null,
+        ?bool $rgbFlip=null
         ) : array
     {
         if($A->ndim()!=3) {
@@ -703,7 +709,7 @@ class MatlibTest extends TestCase
     public function translate_pow(
        NDArray $A,
        NDArray $alpha,
-       bool $trans=null
+       ?bool $trans=null
        ) : array
     {
         if($trans===null) {
@@ -904,9 +910,9 @@ class MatlibTest extends TestCase
         bool $scatterAdd,
         NDArray $A,
         NDArray $X,
-        int $axis=null,
-        NDArray $B=null,
-        $dtype=null) : array
+        ?int $axis=null,
+        ?NDArray $B=null,
+        ?int $dtype=null) : array
     {
 //echo "shapeX=[".implode(',',$X->shape())."],shapeA=[".implode(',',$A->shape())."]\n";
         if($axis===null) {
@@ -995,9 +1001,9 @@ class MatlibTest extends TestCase
         NDArray $X,
         NDArray $A,
         int $numClass,
-        int $axis=null,
-        NDArray $B=null,
-        $dtype=null) : array
+        ?int $axis=null,
+        ?NDArray $B=null,
+        ?int $dtype=null) : array
     {
 //echo "shapeX=[".implode(',',$X->shape())."],shapeA=[".implode(',',$A->shape())."]\n";
 //echo "axis=$axis,numClass=$numClass\n";
@@ -1181,8 +1187,8 @@ class MatlibTest extends TestCase
         bool $addMode,
         NDArray $A, 
         NDarray $X,
-        int $batchDims=null,
-        NDArray $B=null,
+        ?int $batchDims=null,
+        ?NDArray $B=null,
     ) : array
     {
         $batchDims ??= 0;
@@ -1252,8 +1258,8 @@ class MatlibTest extends TestCase
     public function translate_gatherND(
         NDArray $params, 
         NDarray $indices,
-        int $batchDims=null,
-        NDArray $outputs=null,
+        ?int $batchDims=null,
+        ?NDArray $outputs=null,
     ) : array
     {
         return $this->doGatherND(
@@ -1275,8 +1281,8 @@ class MatlibTest extends TestCase
         NDarray $indices,
         NDArray $updates,
         array $shape,
-        int $batchDims=null,
-        NDArray $outputs=null,
+        ?int $batchDims=null,
+        ?NDArray $outputs=null,
     ) : array
     {
         if($outputs==null) {
@@ -1302,8 +1308,8 @@ class MatlibTest extends TestCase
         NDarray $indices,
         NDArray $updates,
         array $shape,
-        int $batchDims=null,
-        NDArray $outputs=null,
+        ?int $batchDims=null,
+        ?NDArray $outputs=null,
     ) : array
     {
         if($outputs==null) {
@@ -1331,11 +1337,11 @@ class MatlibTest extends TestCase
         bool $addMode,
         NDArray $A,
         NDarray $X,
-        int $axis=null,
-        int $batchDims=null,
-        int $detailDepth=null,
-        int $indexDepth=null,
-        NDArray $B=null,
+        ?int $axis=null,
+        ?int $batchDims=null,
+        ?int $detailDepth=null,
+        ?int $indexDepth=null,
+        ?NDArray $B=null,
     ) : array {
         $batchDims ??= 0;
         if($batchDims<0) {
@@ -1467,11 +1473,11 @@ class MatlibTest extends TestCase
     public function translate_gatherb(
         NDArray $params,
         NDarray $indices,
-        int $axis=null,
-        int $batchDims=null,
-        int $detailDepth=null,
-        int $indexDepth=null,
-        NDArray $outputs=null,
+        ?int $axis=null,
+        ?int $batchDims=null,
+        ?int $detailDepth=null,
+        ?int $indexDepth=null,
+        ?NDArray $outputs=null,
     ) : array {
         return $this->doGatherb(
             $reverse=false,
@@ -1496,11 +1502,11 @@ class MatlibTest extends TestCase
         NDarray $indices,
         NDArray $updates,
         array $shape,
-        int $axis=null,
-        int $batchDims=null,
-        int $detailDepth=null,
-        int $indexDepth=null,
-        NDArray $outputs=null,
+        ?int $axis=null,
+        ?int $batchDims=null,
+        ?int $detailDepth=null,
+        ?int $indexDepth=null,
+        ?NDArray $outputs=null,
     ): array
     {
         if($outputs==null) {
@@ -1530,11 +1536,11 @@ class MatlibTest extends TestCase
         NDarray $indices,
         NDArray $updates,
         array $shape,
-        int $axis=null,
-        int $batchDims=null,
-        int $detailDepth=null,
-        int $indexDepth=null,
-        NDArray $outputs=null,
+        ?int $axis=null,
+        ?int $batchDims=null,
+        ?int $detailDepth=null,
+        ?int $indexDepth=null,
+        ?NDArray $outputs=null,
     ) : array
     {
         if($outputs==null) {
@@ -1559,7 +1565,7 @@ class MatlibTest extends TestCase
         NDArray $input,
         array $begin,
         array $size,
-        NDArray $output=null
+        ?NDArray $output=null
         ) : array
     {
         if(!$reverse){
@@ -1692,8 +1698,8 @@ class MatlibTest extends TestCase
     }
 
     public function translate_repeat(
-        NDArray $A, int $repeats, int $axis=null,bool $keepdims=null,
-        NDArray $output=null)
+        NDArray $A, int $repeats, ?int $axis=null, ?bool $keepdims=null,
+        ?NDArray $output=null)
     {
         if($repeats<1) {
             throw new InvalidArgumentException('repeats argument must be one or greater.');
@@ -1755,8 +1761,8 @@ class MatlibTest extends TestCase
     public function translate_onehot(
         NDArray $X,
         int $numClass,
-        float $a=null,
-        NDArray $Y=null) : array
+        ?float $a=null,
+        ?NDArray $Y=null) : array
     {
         if($X->ndim()!=1) {
             throw new InvalidArgumentException('"X" must be 1D-NDArray.');
@@ -1793,9 +1799,9 @@ class MatlibTest extends TestCase
 
     public function translate_reduceSum(
         NDArray $A,
-        int $axis=null,
-        NDArray $B=null,
-        $dtype=null) : array
+        ?int $axis=null,
+        ?NDArray $B=null,
+        ?int $dtype=null) : array
     {
         $ndim = $A->ndim();
         if($axis<0) {
@@ -1856,9 +1862,9 @@ class MatlibTest extends TestCase
     public function translate_searchsorted(
         NDArray $A,
         NDArray $X,
-        bool $right=null,
-        $dtype=null,
-        NDArray $Y=null
+        ?bool $right=null,
+        ?int $dtype=null,
+        ?NDArray $Y=null
         ) : array
     {
         if($A->ndim()==1) {
@@ -1917,9 +1923,9 @@ class MatlibTest extends TestCase
 
     public function translate_cumsum(
         NDArray $X,
-        bool $exclusive=null,
-        bool $reverse=null,
-        NDArray $Y=null
+        ?bool $exclusive=null,
+        ?bool $reverse=null,
+        ?NDArray $Y=null
         ) : array
     {
         if($exclusive===null) {
@@ -1952,10 +1958,10 @@ class MatlibTest extends TestCase
 
     public function translate_cumsumb(
         NDArray $inputs,
-        int $axis=null,
-        bool $exclusive=null,
-        bool $reverse=null,
-        NDArray $outputs=null
+        ?int $axis=null,
+        ?bool $exclusive=null,
+        ?bool $reverse=null,
+        ?NDArray $outputs=null
         ) : array
     {
         $ndim = $inputs->ndim();
@@ -2049,9 +2055,9 @@ class MatlibTest extends TestCase
         array $shape,
         $low,
         $high,
-        int $dtype=null,
-        int $seed=null,
-        NDArray $output=null) : array
+        ?int $dtype=null,
+        ?int $seed=null,
+        ?NDArray $output=null) : array
     {
         $X = $output;
         if($dtype!==null&&$X!==null) {
@@ -2090,9 +2096,9 @@ class MatlibTest extends TestCase
         array $shape,
         $mean,
         $scale,
-        int $dtype=null,
-        int $seed=null,
-        NDArray $output=null) : array
+        ?int $dtype=null,
+        ?int $seed=null,
+        ?NDArray $output=null) : array
     {
         $X = $output;
         if($dtype!==null&&$X!==null) {
@@ -2129,10 +2135,10 @@ class MatlibTest extends TestCase
     
     public function translate_randomSequence(
         int $base,
-        int $size=null,
-        int $seed=null,
-        int $dtype=null,
-        NDArray $output=null,
+        ?int $size=null,
+        ?int $seed=null,
+        ?int $dtype=null,
+        ?NDArray $output=null,
         ) : array
     {
         $X = $output;
@@ -2164,6 +2170,367 @@ class MatlibTest extends TestCase
         ];
         //$X = $X[[0,$size-1]];
         //return $X;
+    }
+
+    public function translate_masking(
+        NDArray $mask,
+        NDArray $data,
+        ?int $batchDims=null,
+        ?int $axis=null,
+        ?float $fill=null,
+        ?int $mode=null
+        ) : array
+    {
+
+        //if($mask->dtype()!=NDArray::bool) {
+        //    $types = $this->dtypeToString[$mask->dtype()];
+        //    throw new InvalidArgumentException('dtype of mask must be bool. :'.$types);
+        //}
+        $batchDims ??= 0;
+        if($batchDims<0) {
+            $batchDims += $data->ndim();
+        }
+        if($batchDims>$data->ndim()) {
+            throw new InvalidArgumentException(
+                "batchDims ($batchDims) must be less than dims of data (".$data->ndim().") or equal."
+            );
+        }
+        $axis ??= $batchDims;
+        if($axis<0) {
+            $axis += $data->ndim();
+        }
+        if($axis>$data->ndim()) {
+            throw new InvalidArgumentException(
+                "axis ($axis) must be less than to ndims of data (".$data->ndim().")"
+            );
+        }
+        if($batchDims>$axis) {
+            if($axis==0) {
+                $batchDims = 0;
+            } else {
+                throw new InvalidArgumentException("batchDims ($batchDims) must be less than or equal to axis ($axis)");
+            }
+        }
+        if($mask->ndim()<$batchDims) {
+            throw new InvalidArgumentException(
+                "batchDims ($batchDims) must be less than or equal to ndims of mask (".$mask->ndim().")"
+            );
+        }
+        $fill ??= 0;
+        $mode ??= 0;
+
+        //echo "data  sh: ".$this->printableShapes($data->shape())."\n";
+        //echo "mask sh: ".$this->printableShapes($mask->shape())."\n";
+        //echo "batchDims: ".$batchDims."\n";
+        // data
+        $outerShape = $data->shape();
+        $brodacastShape = array_splice($outerShape, $batchDims);
+        $innerShape = array_splice($brodacastShape, $axis-$batchDims);
+        $innterBroadcastShape = array_splice($innerShape,$mask->ndim()-$batchDims);
+        // mask
+        $outerShapeX = $mask->shape();
+        $innerShapeX = array_splice($outerShapeX, $batchDims);
+
+        //echo "mask: ".$this->printableShapes($mask->shape())."\n";
+        //echo "data: ".$this->printableShapes($data->shape())."\n";
+        //echo "batchDims: ".$batchDims."\n";
+        //echo "axis: ".$axis."\n";
+        //echo "outerShape: ".$this->printableShapes($outerShape)."\n";
+        //echo "brodacastShape: ".$this->printableShapes($brodacastShape)."\n";
+        //echo "innerShape: ".$this->printableShapes($innerShape)."\n";
+        //echo "outerShapeX: ".$this->printableShapes($outerShapeX)."\n";
+        //echo "innerShapeX: ".$this->printableShapes($innerShapeX)."\n";
+
+        if($outerShape!=$outerShapeX) {
+            throw new InvalidArgumentException('Unmatch dimension outer shape.: '.
+                'mask('.implode(',',$mask->shape()).') => data('.implode(',',$data->shape()).')');
+        }
+        if($innerShape!=$innerShapeX) {
+            throw new InvalidArgumentException('Unmatch dimension inner shape.: '.
+                'mask('.implode(',',$mask->shape()).') => data('.implode(',',$data->shape()).')');
+        }
+        $m = (int)array_product($outerShape);
+        $n = (int)array_product($brodacastShape);
+        $k = (int)array_product($innerShape);
+        $len = (int)array_product($innterBroadcastShape);
+
+        if($n==1) {
+            $k = $m*$k;
+            $m = 1;
+        }
+        if($k==1) {
+            $k = $m;
+            $len = $n*$len;
+            $m = 1;
+            $n = 1;
+        }
+        //echo "m=$m,n=$n,k=$k\n";
+
+        $XX = $mask->buffer();
+        $offX = $mask->offset();
+        $AA = $data->buffer();
+        $offA = $data->offset();
+
+        //$this->math->masking(  // tempolary implements
+        //    $m,
+        //    $n,
+        //    $k,
+        //    $fill,
+        //    $XX,$offX,
+        //    $AA,$offA,
+        //);
+        //return $A;
+
+        return [
+            $m,
+            $n,
+            $k,
+            $len,
+            $fill,
+            $mode,
+            $XX,$offX,
+            $AA,$offA,
+        ];
+    }
+    
+    protected function parseEinsum(
+        string $equation,
+        NDArray ...$arrays,
+    ) : array
+    {
+        [$a,$b] = $arrays;
+        $equation = str_replace(' ','',$equation);
+        if(!preg_match(
+            "/([a-zA-Z]+),([a-zA-Z]+)->([a-zA-Z]+)/",
+            $equation,
+            $split_string
+        )) {
+            throw new InvalidArgumentException("Not recognized as an equation: '{$equation}'");
+        }
+        $labelA = $split_string[1];
+        $labelB = $split_string[2];
+        $labelC = $split_string[3];
+        if($a->ndim()!=strlen($labelA)) {
+            $msg = "(".implode(',',$a->shape()).")";
+            throw new InvalidArgumentException("The rank of array A does not match the equation: '{$equation}', but {$msg} given.");
+        }
+        if($b->ndim()!=strlen($labelB)) {
+            $msg = "(".implode(',',$b->shape()).")";
+            throw new InvalidArgumentException("The rank of array B does not match the equation: '{$equation}', but {$msg} given.");
+        }
+
+        $allIndices = [];
+        $labels = [$labelA,$labelB];
+        $shapes = [$a->shape(),$b->shape()];
+        foreach($labels as $idx => $label) {
+            foreach(str_split($label) as $axis => $chr) {
+                if(array_key_exists($chr,$allIndices)) {
+                    if($allIndices[$chr]!=$shapes[$idx][$axis]) {
+                        $shapeError = '('.implode(',',$a->shape()).'),('.implode(',',$b->shape()).')';
+                        throw new InvalidArgumentException("Unmatch shapes in index letter '{$chr}' in equation:'{$equation}', but shapes {$shapeError} given.");
+                    }
+                } else {
+                    $allIndices[$chr] = $shapes[$idx][$axis];
+                }
+            }
+        }
+        $outputShape = [];
+        foreach(str_split($labelC) as $axis => $chr) {
+            if(!array_key_exists($chr,$allIndices)) {
+                throw new InvalidArgumentException("Target index letter '{$chr}' not found in inputs.:'{$equation}'");
+            }
+            $outputShape[$chr] = $allIndices[$chr];
+            unset($allIndices[$chr]);
+        }
+        $allIndices = array_merge($outputShape,$allIndices);
+        $outputShape = array_values($outputShape);
+
+        // complie labels
+        $allLabels = array_keys($allIndices);
+        $sizeOfIndices = array_values($allIndices);
+        $labels = [$labelA,$labelB,$labelC];
+        $compiledLabels = [];
+        foreach($labels as $label) {
+            $compiledLabel = [];
+            foreach(str_split($label) as $axis => $chr) {
+                $compiledLabel[] = array_search($chr,$allLabels);
+            }
+            $compiledLabels[] = $compiledLabel;
+        }
+
+        return [
+            $sizeOfIndices,
+            $compiledLabels,
+            $outputShape,
+        ];
+    }
+
+    public function einsum_build_lds(
+        array $sizeOfIndices,
+        array $label,
+        array $shape,
+    ) : array
+    {
+        $lds = array_fill(0,count($sizeOfIndices),0);
+        $ld = 1;
+        foreach(array_reverse($label,true) as $axis => $lbl) {
+            $broadcast = false;
+            if($shape[$axis]==1) {
+                $broadcast = true;
+            }
+            if(!$broadcast) {
+                $lds[$lbl] += $ld;
+            }
+            $ld *= $sizeOfIndices[$lbl];
+        }
+        return $lds;
+    }
+
+    public function translate_einsum(
+        string $equation,
+        NDArray $a,
+        NDArray $b,
+    ) : array
+    {
+        $shapeA = $a->shape();
+        $shapeB = $b->shape();
+        $cacheKey = $equation;
+            [
+                $sizeOfIndices,
+                $compiledLabels,
+                $outputShape,
+            ] = $this->parseEinsum($equation, $a, $b);
+            [$labelA,$labelB,$labelC] = $compiledLabels;
+        $ldA = $this->einsum_build_lds($sizeOfIndices,$labelA,$shapeA);
+        $ldB = $this->einsum_build_lds($sizeOfIndices,$labelB,$shapeB);
+        $sizeOfIndices = $this->array($sizeOfIndices,dtype:NDArray::int32)->buffer();
+        $ldA = $this->array($ldA,dtype:NDArray::int32)->buffer();
+        $ldB = $this->array($ldB,dtype:NDArray::int32)->buffer();
+
+        $outputs = $this->zeros($outputShape,dtype:$a->dtype());
+        //$this->zeros($outputs);
+
+        $AA = $a->buffer();
+        $offsetA = $a->offset();
+        $BB = $b->buffer();
+        $offsetB = $b->offset();
+        $CC = $outputs->buffer();
+        $offsetC = $outputs->offset();
+        $ndimC = $outputs->ndim();
+
+        return [
+            $sizeOfIndices,
+            $AA,
+            $offsetA,
+            $ldA,
+            $BB,
+            $offsetB,
+            $ldB,
+            $CC,
+            $offsetC,
+            $ndimC,
+            $outputs,
+        ];
+    }
+
+    public function translate_einsum4p1(
+        string $equation,
+        NDArray $a,
+        NDArray $b,
+        ?NDArray $c=null,
+    ) : array
+    {
+        $shapeA = $a->shape();
+        $shapeB = $b->shape();
+
+            [
+                $dims,
+                $compiledLabels,
+                $shapeC,
+            ] = $this->parseEinsum($equation, $a, $b);
+            [$labelA,$labelB,$labelC] = $compiledLabels;
+            $sumDims = count($dims)-count($labelC);
+            $inputMaxDims = 5-(1-$sumDims);
+            if(count($labelC)>4) {
+                throw new InvalidArgumentException("rank of C must be less than 4D or equal. (".implode(',',($dims?$dims:array_slice($dims,0,-$dims))).") given.");
+            }
+            if($sumDims>1) {
+                throw new InvalidArgumentException("rank of overlay dims must be less than 1D or equal. '{$equation}' and {$sumDims} sum dims given.");
+            }
+            if(count($dims)>$inputMaxDims) {
+                throw new InvalidArgumentException("dims must be less than {$inputMaxDims}D or equal.");
+            }
+            if(count($labelA)>$inputMaxDims) {
+                throw new InvalidArgumentException("rank of A must be less than {$inputMaxDims}D or equal. (".implode(',',$a->shape()).") given.");
+            }
+            if(count($labelB)>$inputMaxDims) {
+                throw new InvalidArgumentException("rank of B must be less than {$inputMaxDims}D or equal. (".implode(',',$b->shape()).") given.");
+            }
+
+        $ldA = $this->einsum_build_lds($dims,$labelA,$shapeA);
+        $ldB = $this->einsum_build_lds($dims,$labelB,$shapeB);
+    
+        if($c==null) {
+            $c = $this->zeros($shapeC,dtype:$a->dtype());
+        } else {
+            if($c->shape()!=$shapeC) {
+                throw new InvalidArgumentException(
+                    "unmatch shape of C. the shape must be (".implode(',',$shapeC)."). ".
+                    "(".implode(',',$c->shape()).") given.");
+            }
+        }
+        if($sumDims==0) {
+            $dims[] = 1;
+            $ldA[]  = 1;
+            $ldB[]  = 1;
+        }
+        //echo "equation=$equation\n";
+        //echo "labelA=(".implode(',',$labelA).")\n";
+        //echo "labelB=(".implode(',',$labelB).")\n";
+        //echo "labelC=(".implode(',',$labelC).")\n";
+        //echo "shapeC=(".implode(',',$shapeC).")\n";
+        //echo "dims=(".implode(',',$dims).")\n";
+        //echo "ldA=(".implode(',',$ldA).")\n";
+        //echo "ldB=(".implode(',',$ldB).")\n";
+        $dims = array_pad($dims,-5,1);
+        $ldA = array_pad($ldA,-5,0);
+        $ldB = array_pad($ldB,-5,0);
+        //echo "dims=(".implode(',',$dims).")\n";
+        //echo "ldA=(".implode(',',$ldA).")\n";
+        //echo "ldB=(".implode(',',$ldB).")\n";
+        [$dim0,$dim1,$dim2,$dim3,$dim4] = $dims;
+        [$ldA0,$ldA1,$ldA2,$ldA3,$ldA4] = $ldA;
+        [$ldB0,$ldB1,$ldB2,$ldB3,$ldB4] = $ldB;
+        $AA = $a->buffer();
+        $offsetA = $a->offset();
+        $BB = $b->buffer();
+        $offsetB = $b->offset();
+        $CC = $c->buffer();
+        $offsetC = $c->offset();
+        return [
+            $dim0,
+            $dim1,
+            $dim2,
+            $dim3,
+            $dim4,
+            $AA,
+            $offsetA,
+            $ldA0,
+            $ldA1,
+            $ldA2,
+            $ldA3,
+            $ldA4,
+            $BB,
+            $offsetB,
+            $ldB0,
+            $ldB1,
+            $ldB2,
+            $ldB3,
+            $ldB4,
+            $CC,
+            $offsetC,
+            $c,
+        ];
     }
 
     public static function providerDtypesFloats()
@@ -2204,6 +2571,42 @@ class MatlibTest extends TestCase
             ]],
             'int32' => [[
                 'dtype' => NDArray::int8,
+            ]],
+        ];
+    }
+
+    public static function providerDtypesFloatsAndAllInteger()
+    {
+        return [
+            'float32' => [[
+                'dtype' => NDArray::float32,
+            ]],
+            'float64' => [[
+                'dtype' => NDArray::float64,
+            ]],
+            'int8' => [[
+                'dtype' => NDArray::int8,
+            ]],
+            'uint8' => [[
+                'dtype' => NDArray::uint8,
+            ]],
+            'int16' => [[
+                'dtype' => NDArray::int16,
+            ]],
+            'uint16' => [[
+                'dtype' => NDArray::uint16,
+            ]],
+            'int32' => [[
+                'dtype' => NDArray::int32,
+            ]],
+            'uint32' => [[
+                'dtype' => NDArray::uint32,
+            ]],
+            'int64' => [[
+                'dtype' => NDArray::int64,
+            ]],
+            'uint64' => [[
+                'dtype' => NDArray::uint64,
             ]],
         ];
     }
@@ -2488,9 +2891,7 @@ class MatlibTest extends TestCase
         $min = $matlib->sum($N,$XX,$offX,$incX);
     }
  
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testMinNormal($params)
     {
         extract($params);
@@ -2617,9 +3018,7 @@ class MatlibTest extends TestCase
         $min = $matlib->imin($N,$XX,$offX,$incX);
     }
  
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testMaxNormal($params)
     {
         extract($params);
@@ -2745,9 +3144,7 @@ class MatlibTest extends TestCase
         $min = $matlib->imax($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testIncrementNormal($params)
     {
         extract($params);
@@ -2876,9 +3273,7 @@ class MatlibTest extends TestCase
         $matlib->increment($N,$alpha,$XX,$offX,$incX,$beta);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testReciprocalNormal($params)
     {
         extract($params);
@@ -3013,9 +3408,7 @@ class MatlibTest extends TestCase
         $matlib->reciprocal($N,$alpha,$XX,$offX,$incX,$beta);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testMaximumNormal($params)
     {
         extract($params);
@@ -3240,9 +3633,7 @@ class MatlibTest extends TestCase
         $matlib->maximum($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testMinimumNormal($params)
     {
         extract($params);
@@ -3467,9 +3858,7 @@ class MatlibTest extends TestCase
         $matlib->minimum($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
     
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testGreaterNormal($params)
     {
         extract($params);
@@ -3694,9 +4083,7 @@ class MatlibTest extends TestCase
         $matlib->greater($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testGreaterEqualNormal($params)
     {
         extract($params);
@@ -3711,9 +4098,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([[0,0],[1,1],[1,1]],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testLessNormal($params)
     {
         extract($params);
@@ -3938,9 +4323,7 @@ class MatlibTest extends TestCase
         $matlib->less($M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testLessEqualNormal($params)
     {
         extract($params);
@@ -3955,9 +4338,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([[1,1],[1,1],[0,0]],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testMultiplySameSizeNormal($params)
     {
         extract($params);
@@ -3974,9 +4355,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([10,200,3000],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testMultiplyBroadcastNormal($params)
     {
         extract($params);
@@ -4246,9 +4625,7 @@ class MatlibTest extends TestCase
         $matlib->multiply($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testaddSameSizeNormal($params)
     {
         extract($params);
@@ -4267,9 +4644,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([9,98,997],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testaddBroadcastNormal($params)
     {
         extract($params);
@@ -4539,9 +4914,7 @@ class MatlibTest extends TestCase
         $matlib->add($trans,$M,$N,$alpha,$XX,$offX,$incX,$AA,$offA,$ldA);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testDuplicateSameSizeNormal($params)
     {
         extract($params);
@@ -4558,9 +4931,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,2,3],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testDuplicateBroadcastNormal($params)
     {
         extract($params);
@@ -4830,9 +5201,7 @@ class MatlibTest extends TestCase
         $matlib->duplicate($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testSquareNormal($params)
     {
         extract($params);
@@ -4944,9 +5313,7 @@ class MatlibTest extends TestCase
         $matlib->square($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testsqrtNormal($params)
     {
         extract($params);
@@ -5077,9 +5444,7 @@ class MatlibTest extends TestCase
         $matlib->sqrt($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testrsqrtNormal($params)
     {
         extract($params);
@@ -5239,9 +5604,7 @@ class MatlibTest extends TestCase
         $matlib->rsqrt($N,$alpha,$XX,$offX,$incX,$beta);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testPowSameSizeNormal($params)
     {
         extract($params);
@@ -5258,9 +5621,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,8,9],$A->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testPowBroadcastNormal($params)
     {
         extract($params);
@@ -5530,9 +5891,7 @@ class MatlibTest extends TestCase
         $matlib->pow($trans,$M,$N,$AA,$offA,$ldA,$XX,$offX,$incX);;
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testexpNormal($params)
     {
         extract($params);
@@ -5646,9 +6005,7 @@ class MatlibTest extends TestCase
         $matlib->exp($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testlogNormal($params)
     {
         extract($params);
@@ -5786,9 +6143,7 @@ class MatlibTest extends TestCase
         $matlib->log($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testtanhNormal($params)
     {
         extract($params);
@@ -5907,9 +6262,7 @@ class MatlibTest extends TestCase
         $matlib->tanh($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testsinNormal($params)
     {
         extract($params);
@@ -6014,9 +6367,7 @@ class MatlibTest extends TestCase
         $matlib->sin($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testcosNormal($params)
     {
         extract($params);
@@ -6135,9 +6486,7 @@ class MatlibTest extends TestCase
         $matlib->cos($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testtanNormal($params)
     {
         extract($params);
@@ -6256,9 +6605,7 @@ class MatlibTest extends TestCase
         $matlib->tan($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testfillNormal($params)
     {
         extract($params);
@@ -6271,9 +6618,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,1,1,1],$X->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testnan2numNormal($params)
     {
         extract($params);
@@ -6292,9 +6637,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,2,4,1],$X->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testisnanNormal($params)
     {
         extract($params);
@@ -6309,9 +6652,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,0,0,1],$X->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testsearchsortedNormal($params)
     {
         extract($params);
@@ -6686,9 +7027,7 @@ class MatlibTest extends TestCase
         $matlib->searchsorted($m,$n,$AA,$offsetA,$ldA,$XX,$offsetX,$incX,$right,$YY,$offsetY,$incY);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testcumsumNormal($params)
     {
         extract($params);
@@ -6941,9 +7280,7 @@ class MatlibTest extends TestCase
         $matlib->cumsum($n,$XX,$offsetX,$incX,$exclusive,$reverse,$YY,$offsetY,$incY);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testcumsumbNormal($params)
     {
         extract($params);
@@ -7025,9 +7362,7 @@ class MatlibTest extends TestCase
         //$this->assertEquals(1.0,$Y[3]);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testcumsumbWithAxis($params)
     {
         extract($params);
@@ -7147,9 +7482,7 @@ class MatlibTest extends TestCase
     }
 
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testzerosNormal($params)
     {
         extract($params);
@@ -7262,9 +7595,7 @@ class MatlibTest extends TestCase
         $matlib->zeros($N,$XX,$offX,$incX);
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger32
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger32')]
     public function testTranspose1DNormal($params)
     {
         extract($params);
@@ -7289,9 +7620,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,2,4,9],$B->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger32
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger32')]
     public function testTranspose2DNormal($params)
     {
         extract($params);
@@ -7316,9 +7645,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([[1,4],[2,5],[3,6]],$B->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger32
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger32')]
     public function testTranspose3DNormal($params)
     {
         extract($params);
@@ -7366,9 +7693,7 @@ class MatlibTest extends TestCase
         ],$B->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger32
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger32')]
     public function testTranspose3DWithPerm($params)
     {
         extract($params);
@@ -7976,9 +8301,7 @@ class MatlibTest extends TestCase
          ],$origB->toArray());
     }
     
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloatsAndAllInteger')]
     public function testBandpartNormal($params)
     {
         extract($params);
@@ -8064,6 +8387,94 @@ class MatlibTest extends TestCase
             [[1,0,0],
              [1,1,0],
              [0,1,1]],
+        ],$A->toArray());
+    }
+
+    public function testBandpartBoolean()
+    {
+        $dtype = NDArray::bool;
+        $matlib = $this->getMatlib();
+
+        // under
+        $A = $this->ones([2,3,3],dtype:$dtype);
+        [
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        ] = $this->translate_bandpart($A,0,-1);
+        $matlib->bandpart(
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        );
+        $this->assertEquals([
+            [[true, true, true],
+             [false,true, true],
+             [false,false,true]],
+            [[true, true, true],
+             [false,true, true],
+             [false,false,true]],
+        ],$A->toArray());
+
+        $A = $this->ones([2,3,3],dtype:$dtype);
+        [
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        ] = $this->translate_bandpart($A,0,1);
+        $matlib->bandpart(
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        );
+        $this->assertEquals([
+            [[true, true, false],
+             [false,true, true],
+             [false,false,true]],
+            [[true, true, false],
+             [false,true, true],
+             [false,false,true]],
+        ],$A->toArray());
+
+        // upper
+        $A = $this->ones([2,3,3],dtype:$dtype);
+        [
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        ] = $this->translate_bandpart($A,-1,0);
+        $matlib->bandpart(
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        );
+        $this->assertEquals([
+            [[true, false,false],
+             [true, true,false],
+             [true, true,true ]],
+            [[true, false,false],
+             [true, true,false],
+             [true, true,true ]],
+        ],$A->toArray());
+
+        $A = $this->ones([2,3,3],dtype:$dtype);
+        [
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        ] = $this->translate_bandpart($A,1,0);
+        $matlib->bandpart(
+            $m,$n,$k,
+            $AA, $offsetA,
+            $lower,$upper
+        );
+        $this->assertEquals([
+            [[true, false,false],
+             [true, true, false],
+             [false,true, true ]],
+            [[true, false,false],
+             [true, true, false],
+             [false,true, true ]],
         ],$A->toArray());
     }
 
@@ -8166,28 +8577,26 @@ class MatlibTest extends TestCase
         );
     }
 
-    public function testBandpartUnsupportedDtype()
-    {
-        $matlib = $this->getMatlib();
+    //public function testBandpartUnsupportedDtype()
+    //{
+    //    $matlib = $this->getMatlib();
+//
+    //    $A = $this->ones([2,3,3],NDArray::int32);
+    //    [
+    //        $m,$n,$k,
+    //        $AA, $offsetA,
+    //        $lower,$upper
+    //    ] = $this->translate_bandpart($A,0,-1);
+    //    $this->expectException(InvalidArgumentException::class);
+    //    $this->expectExceptionMessage('Unsupported data type.');
+    //    $matlib->bandpart(
+    //        $m,$n,$k,
+    //        $AA, $offsetA,
+    //        $lower,$upper
+    //    );
+    //}
 
-        $A = $this->ones([2,3,3],NDArray::int32);
-        [
-            $m,$n,$k,
-            $AA, $offsetA,
-            $lower,$upper
-        ] = $this->translate_bandpart($A,0,-1);
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Unsupported data type.');
-        $matlib->bandpart(
-            $m,$n,$k,
-            $AA, $offsetA,
-            $lower,$upper
-        );
-    }
-
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testTopkNormal($params)
     {
         extract($params);
@@ -8251,9 +8660,7 @@ class MatlibTest extends TestCase
 
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testTopkLarge($params)
     {
         extract($params);
@@ -8322,9 +8729,7 @@ class MatlibTest extends TestCase
         $this->assertTrue(true);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testTopkWithoutSorted($params)
     {
         extract($params);
@@ -8414,9 +8819,7 @@ class MatlibTest extends TestCase
         }
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger326w3246indexes
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger326w3246indexes')]
     public function testGatherAxisNullNormal($params)
     {
         extract($params);
@@ -8443,9 +8846,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([1,3],$B->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger326w3246indexes
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger326w3246indexes')]
     public function testGatherAxisNullAddMode($params)
     {
         extract($params);
@@ -8474,9 +8875,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([2,4],$B->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloatsAndInteger326w3246indexes
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger326w3246indexes')]
     public function testGatherAxisNullReverse($params)
     {
         extract($params);
@@ -8792,9 +9191,7 @@ class MatlibTest extends TestCase
         $matlib->gather($reverse,$addMode,$n,$k,$numClass,$XX,$offX,$AA,$offA,$BB,$offB);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testReduceGatherAxis1Normal($params)
     {
         extract($params);
@@ -10572,14 +10969,11 @@ class MatlibTest extends TestCase
 
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloatsAndInteger8')]
     public function testsliceNormal($params)
     {
         extract($params);
         $matlib = $this->getMatlib();
-        // float32
         // 3D
         $x = $this->array([
             [[0,1,2],
@@ -10593,7 +10987,7 @@ class MatlibTest extends TestCase
         ],dtype:$dtype);
         $this->assertEquals(3,$x->ndim());
         $y = $this->zeros([2,2,3],dtype:$dtype);
-        return [
+        [
             $reverse,
             $addMode,
             $m,
@@ -10634,9 +11028,65 @@ class MatlibTest extends TestCase
         ],$y->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    public function testSliceBoolNormal()
+    {
+        $dtype = NDArray::bool;
+        $matlib = $this->getMatlib();
+        // 3D
+        $x = $this->array([
+            [[true, false,false],
+             [true, true, false],
+             [true, true, true],
+             [false,true, true]],
+            [[false,false,true],
+             [false,true, true],
+             [true, true, true],
+             [true, true, false]],
+        ],dtype:$dtype);
+        $this->assertEquals(3,$x->ndim());
+        $y = $this->ones([2,2,3],dtype:$dtype);
+        [
+            $reverse,
+            $addMode,
+            $m,
+            $n,
+            $k,
+            $itemSize,
+            $AA,$offsetA,$incA,
+            $YY,$offsetY,$incY,
+            $startAxis0,$sizeAxis0,
+            $startAxis1,$sizeAxis1,
+            $startAxis2,$sizeAxis2
+        ] = $this->translate_slice(false,
+            $x,
+            $start=[0,1],
+            $size=[-1,2],
+            $y
+            );
+
+        $matlib->slice(
+            $reverse,
+            $addMode,
+            $m,
+            $n,
+            $k,
+            $itemSize,
+            $AA,$offsetA,$incA,
+            $YY,$offsetY,$incY,
+            $startAxis0,$sizeAxis0,
+            $startAxis1,$sizeAxis1,
+            $startAxis2,$sizeAxis2
+        );
+
+        $this->assertEquals([
+            [[true, true, false],
+             [true, true, true ]],
+            [[false,true, true ],
+             [true, true, true]],
+        ],$y->toArray());
+    }
+
+    #[DataProvider('providerDtypesFloats')]
     public function testRepeatNormal($params)
     {
         extract($params);
@@ -10677,9 +11127,7 @@ class MatlibTest extends TestCase
         ],$Y->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testupdateAddOnehotNormal($params)
     {
         extract($params);
@@ -10932,9 +11380,7 @@ class MatlibTest extends TestCase
         $matlib->updateAddOnehot($m,$n,$a,$XX,$offX,$incX,$YY,$offY,$ldY);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testreduceSumSameSizeNormal($params)
     {
         extract($params);
@@ -10951,9 +11397,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([6,15],$X->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testreduceSumBroadcastTranspose($params)
     {
         extract($params);
@@ -11524,9 +11968,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([-1,0,1,2,3],$Y->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testreduceMaxSameSizeNormal($params)
     {
         extract($params);
@@ -11543,9 +11985,7 @@ class MatlibTest extends TestCase
         $this->assertEquals([3,6],$X->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testmatrixcopyNormal($params)
     {
         extract($params);
@@ -11570,9 +12010,7 @@ class MatlibTest extends TestCase
         ],$B->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testImagecopyNormal($params)
     {
         extract($params);
@@ -11618,9 +12056,7 @@ class MatlibTest extends TestCase
         ],$b->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testreduceArgMaxSameSizeNormal($params)
     {
         extract($params);
@@ -11753,9 +12189,7 @@ class MatlibTest extends TestCase
         $this->assertEquals(-1,$min);
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testRandomNormal($params)
     {
         extract($params);
@@ -11862,9 +12296,7 @@ class MatlibTest extends TestCase
             $y->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testIm2col1dNormal($params)
     {
         extract($params);
@@ -11905,9 +12337,7 @@ class MatlibTest extends TestCase
             $cols->toArray());
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testIm2col2dNormal($params)
     {
         extract($params);
@@ -12000,9 +12430,7 @@ class MatlibTest extends TestCase
         );
     }
 
-    /**
-    * @dataProvider providerDtypesFloats
-    */
+    #[DataProvider('providerDtypesFloats')]
     public function testIm2col3dNormal($params)
     {
         extract($params);
@@ -12087,6 +12515,287 @@ class MatlibTest extends TestCase
             $cols->toArray(),
             $this->zerosLike($cols)
             );
+    }
+
+    ///**
+    //* @dataProvider providerDtypesFloats
+    //*/
+    //public function testMaskingSameSizeNormal($params)
+    //{
+    //    extract($params);
+    //    if($this->checkSkip('masking')){return;}
+//
+    //    $matlib = $this->getMatlib();
+//
+    //    $X = $this->array([true,false,true],dtype:NDArray::bool);
+    //    $A = $this->array([10,100,1000],dtype:$dtype);
+    //    [$trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA] =
+    //        $this->translate_multiply($X,$A);
+//
+    //    $matlib->masking($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
+    //    $this->assertEquals([10,0,1000],$A->toArray());
+    //}
+//
+    ///**
+    //* @dataProvider providerDtypesFloats
+    //*/
+    //public function testMaskingBroadcastNormal($params)
+    //{
+    //    extract($params);
+    //    if($this->checkSkip('masking')){return;}
+//
+    //    $matlib = $this->getMatlib();
+//
+    //    $X = $this->array([true,false,true],dtype:NDArray::bool);
+    //    $A = $this->array([[10,100,1000],[-1,-1,-1]],dtype:$dtype);
+    //    [$trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA] =
+    //        $this->translate_multiply($X,$A);
+//
+    //    $matlib->masking($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
+    //    $this->assertEquals([[10, 0,1000],[-1, 0,-1]],$A->toArray());
+    //}
+//
+    //public function testMaskingBroadcastTranspose()
+    //{
+    //    if($this->checkSkip('masking')){return;}
+//
+    //    $matlib = $this->getMatlib();
+//
+    //    $X = $this->array([true,false,true],dtype:NDArray::bool);
+    //    $A = $this->array([[10,100],[1000,10000],[-1,-1]]);
+    //    [$trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA] =
+    //        $this->translate_multiply($X,$A,true);
+//
+    //    $matlib->masking($trans,$M,$N,$XX,$offX,$incX,$AA,$offA,$ldA);
+    //    $this->assertEquals([[10,100],[ 0, 0],[-1,-1]],$A->toArray());
+    //}
+//
+
+    #[DataProvider('providerDtypesFloatsAndInteger3264')]
+    public function testMaskingSameSizeNormal($params)
+    {
+        extract($params);
+        if($this->checkSkip('masking')){return;}
+
+        $matlib = $this->getMatlib();
+
+        $X = $this->array([true,false,true],dtype:NDArray::bool);
+        $A = $this->array([10,100,1000],dtype:$dtype);
+        [$M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA] =
+            $this->translate_masking($X,$A);
+
+        $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
+        $this->assertEquals([10,0,1000],$A->toArray());
+    }
+
+    #[DataProvider('providerDtypesFloatsAndInteger326w3246indexes')]
+    public function testMaskingBroadcastWithGapAndLenNormal($params)
+    {
+        extract($params);
+        if($this->checkSkip('masking')){return;}
+
+        $matlib = $this->getMatlib();
+
+        // broadcast with gap and implicit len
+        // X:(2,  3  )
+        // A:(2,4,3,2)
+        // outer:(2),bro:(4),inner:(3),bro2:(2)
+        // m=2,n=4,k=3,len=2
+        $X = $this->array([
+            [true,false,true],
+            [false,true,false]
+        ],dtype:NDArray::bool);
+        $A = $this->array([
+            [[[1,-1],[11,-11],[111,-111]],
+             [[2,-2],[12,-12],[112,-112]],
+             [[-3,3],[13,-13],[113,-113]],
+             [[-4,4],[14,-14],[114,-114]]],
+            [[[1,-1],[21,-21],[211,-211]],
+             [[2,-2],[22,-22],[222,-222]],
+             [[-3,3],[23,-23],[223,-223]],
+             [[-4,4],[24,-24],[224,-224]]],
+        ],dtype:$dtype);
+        [$M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA] =
+            $this->translate_masking($X,$A,batchDims:1,axis:2);
+
+        $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
+        $this->assertEquals([
+            [[[1,-1],[ 0,  0],[111,-111]],
+             [[2,-2],[ 0,  0],[112,-112]],
+             [[-3,3],[ 0,  0],[113,-113]],
+             [[-4,4],[ 0,  0],[114,-114]]],
+            [[[0, 0],[21,-21],[  0,   0]],
+             [[0, 0],[22,-22],[  0,   0]],
+             [[0, 0],[23,-23],[  0,   0]],
+             [[0, 0],[24,-24],[  0,   0]]],
+        ],$A->toArray());
+    }
+
+    #[DataProvider('providerDtypesFloatsAndInteger326w3246indexes')]
+    public function testMaskingMaskIsNotBoolType($params)
+    {
+        extract($params);
+        if($this->checkSkip('masking')){return;}
+
+        $matlib = $this->getMatlib();
+
+        $X = $this->array([1,0,1],dtype:NDArray::uint8);
+        $A = $this->array([10,100,1000],dtype:$dtype);
+        [$M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA] =
+            $this->translate_masking($X,$A);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('dtype of X must be bool.: uint8');
+        $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
+    }
+
+    #[DataProvider('providerDtypesFloatsAndInteger326w3246indexes')]
+    public function testMaskingAddMode($params)
+    {
+        extract($params);
+        if($this->checkSkip('masking')){return;}
+
+        $matlib = $this->getMatlib();
+
+        $X = $this->array([true,false,true],dtype:NDArray::bool);
+        $A = $this->array([10,100,1000],dtype:$dtype);
+        [$M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA] =
+            $this->translate_masking($X,$A,fill:-10000,mode:1);
+
+        $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
+        $this->assertEquals([10,-9900,1000],$A->toArray());
+    }
+
+    public function testMaskingBoolSet()
+    {
+        if($this->checkSkip('masking')){return;}
+
+        $matlib = $this->getMatlib();
+        $dtype = NDArray::bool;
+
+        $X = $this->array([true, true, false,false,false,true ],dtype:NDArray::bool);
+        $A = $this->array([true, false,true, false,true, true ],dtype:$dtype);
+        [$M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA] =
+            $this->translate_masking($X,$A);
+
+        $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
+        $this->assertEquals([true, false,false,false,false,true],$A->toArray());
+    }
+
+    public function testMaskingBoolAdd()
+    {
+        if($this->checkSkip('masking')){return;}
+
+        $matlib = $this->getMatlib();
+        $dtype = NDArray::bool;
+
+        $X = $this->array([true, true, false,false,false,true ],dtype:NDArray::bool);
+        $A = $this->array([true, false,true, false,true, true ],dtype:$dtype);
+        [$M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA] =
+            $this->translate_masking($X,$A,fill:true,mode:1);
+
+        $matlib->masking($M,$N,$K,$LEN,$fill,$mode,$XX,$offX,$AA,$offA);
+        $this->assertEquals([true,false,true, true, true, true ],$A->toArray());
+    }
+
+    #[DataProvider('providerDtypesFloats')]
+    public function testEinsumSimple($params)
+    {
+        extract($params);
+        if($this->checkSkip('einsum')){return;}
+
+        $matlib = $this->getMatlib();
+
+        $equation = 'ab,bc->ac';
+        $A = $this->array([
+            [1,2,3],
+            [4,5,6],
+        ],dtype:$dtype);
+        $B = $this->array([
+            [1,2,3,4],
+            [5,6,7,8],
+            [9,10,11,12],
+        ],dtype:$dtype);
+        [
+            $sizeOfIndices,
+            $AA,
+            $offsetA,
+            $ldA,
+            $BB,
+            $offsetB,
+            $ldB,
+            $CC,
+            $offsetC,
+            $ndimC,
+            $outputs,
+        ] = $this->translate_einsum($equation,$A,$B);
+
+        $matlib->einsum(
+            $sizeOfIndices,
+            $AA,
+            $offsetA,
+            $ldA,
+            $BB,
+            $offsetB,
+            $ldB,
+            $CC,
+            $offsetC,
+            $ndimC,
+        );
+
+        $this->assertEquals([
+            [ 38,  44,  50,  56],
+            [ 83,  98, 113, 128],
+        ],$outputs->toArray());
+    }
+
+    #[DataProvider('providerDtypesFloats')]
+    public function testEinsum4p1Simple($params)
+    {
+        extract($params);
+        if($this->checkSkip('einsum4p1')){return;}
+
+        $matlib = $this->getMatlib();
+
+        $equation = 'ab,bc->ac';
+        $A = $this->array([
+            [1,2,3],
+            [4,5,6],
+        ],dtype:$dtype);
+        $B = $this->array([
+            [1,2,3,4],
+            [5,6,7,8],
+            [9,10,11,12],
+        ],dtype:$dtype);
+        [
+            $dim0,$dim1,$dim2,$dim3,$dim4,
+            $AA,
+            $offsetA,
+            $ldA0,$ldA1,$ldA2,$ldA3,$ldA4,
+            $BB,
+            $offsetB,
+            $ldB0,$ldB1,$ldB2,$ldB3,$ldB4,
+            $CC,
+            $offsetC,
+            $c,
+        ] = $this->translate_einsum4p1($equation,$A,$B);
+
+        $matlib->einsum4p1(
+            $dim0,$dim1,$dim2,$dim3,$dim4,
+            $AA,
+            $offsetA,
+            $ldA0,$ldA1,$ldA2,$ldA3,$ldA4,
+            $BB,
+            $offsetB,
+            $ldB0,$ldB1,$ldB2,$ldB3,$ldB4,
+            $CC,
+            $offsetC,
+        );
+
+        $this->assertEquals([
+            [ 38,  44,  50,  56],
+            [ 83,  98, 113, 128],
+        ],$c->toArray());
     }
 
 }

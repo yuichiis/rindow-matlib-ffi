@@ -28,8 +28,8 @@ class MatlibFactory
 
     /** @param array<string> $libFiles */
     public function __construct(
-        string $headerFile=null,
-        array $libFiles=null,
+        ?string $headerFile=null,
+        ?array $libFiles=null,
         )
     {
         if(self::$ffi!==null) {
