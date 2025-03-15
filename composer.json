@@ -10,7 +10,7 @@
     },
     "require-dev": {
         "ext-ffi": "*",
-        "rindow/rindow-math-buffer-ffi": "dev-main"
+        "rindow/rindow-math-buffer-ffi": "^1.0"
     },
     "autoload": {
         "psr-4": {
