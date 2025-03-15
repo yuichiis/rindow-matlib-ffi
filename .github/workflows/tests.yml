@@ -12,7 +12,7 @@ jobs:
     env:
       matlib: 1.1.0
       testlib: 0.0.22
-      repository: ${{ github.actor }}/rindow-matlib
+      repository: ${{ github.repository_owner }}/rindow-matlib
 
     strategy:
       fail-fast: true
