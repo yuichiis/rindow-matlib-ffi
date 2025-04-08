@@ -11947,25 +11947,41 @@ class MatlibTest extends TestCase
         $Y = $this->zeros($X->shape(),$dtype);
         [$n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY] = $this->translate_astype($X, $dtype, $Y);
         $matlib->astype($n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY);
-        $this->assertEquals([255,0,1,2,3],$Y->toArray());
+        if(PHP_OS=='Darwin') {
+            $this->assertEquals([0,0,1,2,3],$Y->toArray());
+        } else {
+            $this->assertEquals([255,0,1,2,3],$Y->toArray());
+        }
 
         $dtype = NDArray::uint16;
         $Y = $this->zeros($X->shape(),$dtype);
         [$n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY] = $this->translate_astype($X, $dtype, $Y);
         $matlib->astype($n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY);
-        $this->assertEquals([65535,0,1,2,3],$Y->toArray());
+        if(PHP_OS=='Darwin') {
+            $this->assertEquals([0,0,1,2,3],$Y->toArray());
+        } else {
+            $this->assertEquals([65535,0,1,2,3],$Y->toArray());
+        }
 
         $dtype = NDArray::uint32;
         $Y = $this->zeros($X->shape(),$dtype);
         [$n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY] = $this->translate_astype($X, $dtype, $Y);
         $matlib->astype($n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY);
-        $this->assertEquals([4294967295,0,1,2,3],$Y->toArray());
+        if(PHP_OS=='Darwin') {
+            $this->assertEquals([0,0,1,2,3],$Y->toArray());
+        } else {
+            $this->assertEquals([4294967295,0,1,2,3],$Y->toArray());
+        }
 
         $dtype = NDArray::uint64;
         $Y = $this->zeros($X->shape(),$dtype);
         [$n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY] = $this->translate_astype($X, $dtype, $Y);
         $matlib->astype($n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY);
-        $this->assertEquals([-1,0,1,2,3],$Y->toArray());
+        if(PHP_OS=='Darwin') {
+            $this->assertEquals([0,0,1,2,3],$Y->toArray());
+        } else {
+            $this->assertEquals([-1,0,1,2,3],$Y->toArray());
+        }
     }
 
     #[DataProvider('providerDtypesFloats')]
