@@ -11947,7 +11947,7 @@ class MatlibTest extends TestCase
         $Y = $this->zeros($X->shape(),$dtype);
         [$n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY] = $this->translate_astype($X, $dtype, $Y);
         $matlib->astype($n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY);
-        if(PHP_OS=='Darwin') {
+        if(defined('PHP_MACHINE_ARCH') && PHP_OS === 'Darwin' && PHP_MACHINE_ARCH === 'arm64') {
             $this->assertEquals([0,0,1,2,3],$Y->toArray());
         } else {
             $this->assertEquals([255,0,1,2,3],$Y->toArray());
@@ -11957,7 +11957,7 @@ class MatlibTest extends TestCase
         $Y = $this->zeros($X->shape(),$dtype);
         [$n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY] = $this->translate_astype($X, $dtype, $Y);
         $matlib->astype($n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY);
-        if(PHP_OS=='Darwin') {
+        if(defined('PHP_MACHINE_ARCH') && PHP_OS === 'Darwin' && PHP_MACHINE_ARCH === 'arm64') {
             $this->assertEquals([0,0,1,2,3],$Y->toArray());
         } else {
             $this->assertEquals([65535,0,1,2,3],$Y->toArray());
@@ -11967,7 +11967,7 @@ class MatlibTest extends TestCase
         $Y = $this->zeros($X->shape(),$dtype);
         [$n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY] = $this->translate_astype($X, $dtype, $Y);
         $matlib->astype($n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY);
-        if(PHP_OS=='Darwin') {
+        if(defined('PHP_MACHINE_ARCH') && PHP_OS === 'Darwin' && PHP_MACHINE_ARCH === 'arm64') {
             $this->assertEquals([0,0,1,2,3],$Y->toArray());
         } else {
             $this->assertEquals([4294967295,0,1,2,3],$Y->toArray());
@@ -11977,7 +11977,7 @@ class MatlibTest extends TestCase
         $Y = $this->zeros($X->shape(),$dtype);
         [$n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY] = $this->translate_astype($X, $dtype, $Y);
         $matlib->astype($n,$dtype,$XX,$offX,$incX,$YY,$offY,$incY);
-        if(PHP_OS=='Darwin') {
+        if(defined('PHP_MACHINE_ARCH') && PHP_OS === 'Darwin' && PHP_MACHINE_ARCH === 'arm64') {
             $this->assertEquals([0,0,1,2,3],$Y->toArray());
         } else {
             $this->assertEquals([-1,0,1,2,3],$Y->toArray());
