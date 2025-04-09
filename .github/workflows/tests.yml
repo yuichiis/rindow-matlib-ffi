@@ -53,7 +53,9 @@ jobs:
           tools: composer, phpstan
           #ini-values: "memory_limit=512M"
           extensions: ffi,mbstring
-
+        env:
+          fail-fast: true
+  
       - name: Setup Matlib (Linux)
         if: ${{ startsWith(matrix.os, 'ubuntu-') }}
         run: |
