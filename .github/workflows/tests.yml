@@ -45,18 +45,6 @@ jobs:
   
     steps:
       - name: Setup PHP ${{ matrix.php }}
-        if: ${{ !startsWith(matrix.os, 'macos-') }}
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          # PHP Extras
-          coverage: none
-          tools: composer, phpunit:${{ matrix.phpunit }}, phpstan
-          #ini-values: "memory_limit=512M"
-          extensions: ffi
-
-      - name: Setup PHP ${{ matrix.php }}
-        if: ${{ startsWith(matrix.os, 'macos-') }}
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
@@ -64,7 +52,7 @@ jobs:
           coverage: none
           tools: composer, phpstan
           #ini-values: "memory_limit=512M"
-          extensions: ffi
+          extensions: ffi,mbstring
 
       - name: Setup Matlib (Linux)
         if: ${{ startsWith(matrix.os, 'ubuntu-') }}
@@ -80,6 +68,7 @@ jobs:
       - name: Composer
         run: |
           composer update
+          composer require --dev phpunit/phpunit=^${{ matrix.phpunit }}
 
       - name: PHP Static Analysys
         run: phpstan
@@ -87,7 +76,7 @@ jobs:
       - name: PHPUnit Tests
         if: ${{ startsWith(matrix.os, 'ubuntu-') }}
         run: | 
-          phpunit -c tests
+          vendor/bin/phpunit -c tests
 
       - name: PHPUnit Tests (macOS)
         if: ${{ startsWith(matrix.os, 'macos-latest') }}
@@ -97,7 +86,6 @@ jobs:
           tar -xzf rindow-matlib-${{ env.matlib }}-Darwin-arm64.tar.gz
           sudo cp -r usr/include /usr/local/
           sudo cp -r usr/lib /usr/local/
-          composer require --dev phpunit/phpunit=${{ matrix.phpunit }}.*
           vendor/bin/phpunit -c tests
 
       - name: PHPUnit Tests (macOS)
@@ -108,7 +96,6 @@ jobs:
           tar -xzf rindow-matlib-${{ env.matlib }}-Darwin-x86_64.tar.gz
           sudo cp -r usr/include /usr/local/
           sudo cp -r usr/lib /usr/local/
-          composer require --dev phpunit/phpunit=${{ matrix.phpunit }}.*
           vendor/bin/phpunit -c tests
 
       - name: PHPUnit Tests (Windows)
@@ -119,4 +106,4 @@ jobs:
           $currentDir = (Get-Location).Path
           $matlibDir = Join-Path -Path $currentDir -ChildPath 'matlib\bin'
           $env:PATH = "$matlibDir;$env:PATH"
-          phpunit -c tests --filter MatlibTest::testaddSameSizeNormal
+          vendor/bin/phpunit -c tests
