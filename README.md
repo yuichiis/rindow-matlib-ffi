@@ -65,7 +65,7 @@ $ cd \your\app\dir
 $ composer require rindow/rindow-matlib-ffi
 ```
 
-### How to setup for Linux
+### How to setup for macOS
 Download the pre-build binary file.
 
 - https://github.com/rindow/rindow-matlib/releases
@@ -84,8 +84,8 @@ Next, copy the include and lib directories to /usr/local.
 ```shell
 $ sudo cp -r usr/include /usr/local/
 $ sudo cp -r usr/lib /usr/local/
-$ brew install libomp  # if you want to use OpenMP
 ```
+If you want to use OpenMP mode please type `brew install libomp`
 
 Set it up using composer.
 
