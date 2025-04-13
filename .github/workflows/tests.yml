@@ -10,8 +10,8 @@ jobs:
     name: tests
     runs-on: ${{ matrix.os }}
     env:
-      matlib: 1.1.0
-      testlib: 0.0.23
+      matlib: 1.1.1
+      testlib: 0.0.24
       repository: ${{ github.repository_owner }}/rindow-matlib
 
     strategy:
