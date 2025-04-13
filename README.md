@@ -65,6 +65,36 @@ $ cd \your\app\dir
 $ composer require rindow/rindow-matlib-ffi
 ```
 
+### How to setup for Linux
+Download the pre-build binary file.
+
+- https://github.com/rindow/rindow-matlib/releases
+
+Extract the tar.gz file to the tmp directory and navigate to the directory.
+
+```shell
+$ tar -xzf rindow-matlib-X.X.X-Darwin-XXX.tar.gz -C /tmp
+$ cd /tmp/rindow-matlib-X.X.X-Darwin-XXX
+```
+
+The standard dylib in the Lib directory is the thread version. Subdirectories contain OpenMP and Serial versions.
+
+Next, copy the include and lib directories to /usr/local.
+
+```shell
+$ sudo cp -r usr/include /usr/local/
+$ sudo cp -r usr/lib /usr/local/
+$ brew install libomp  # if you want to use OpenMP
+```
+
+Set it up using composer.
+
+```shell
+$ mkdir \your\app\dir
+$ cd \your\app\dir
+$ composer require rindow/rindow-matlib-ffi
+```
+
 ### Troubleshooting for Linux
 Since rindow-matlib currently uses ptheads, so you should choose the pthread version for OpenBLAS as well.
 In version 1.0 of Rindow-matlib we recommended the OpenMP version, but now we have changed our policy and are recommending the pthread version.
