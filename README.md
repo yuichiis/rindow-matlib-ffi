@@ -17,7 +17,7 @@ Rindow Matlib includes many matrix operations functions used in machine learning
 Requirements
 ============
 
-- PHP 8.1 or PHP8.2 or PHP8.3 or PHP8.4
+- PHP 8.1 or later
 - Rindow Matlib C Library 1.1 or later
 - Windows 10/11, Linux, macOS
 
