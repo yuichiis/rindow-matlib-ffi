@@ -87,6 +87,13 @@ class Matlib
     ];
 
     protected object $ffi;
+    protected bool $profiling = false;
+    /** @var array<string,float> $profilingStartTime */
+    protected $profilingStartTime = [];
+    /** @var array<string,int> $profilingCount */
+    protected $profilingCount = [];
+    /** @var array<string,float> $profilingTotalTime */
+    protected array $profilingTotalTime = [];
 
     public function __construct(FFI $ffi)
     {
@@ -121,6 +128,37 @@ class Matlib
         return FFI::string($string);
     }
 
+    public function setProfiling(bool $profiling) : void
+    {
+        $this->profiling = $profiling;
+    }
+
+    protected function profilingStart(string $name) : void
+    {
+        if(isset($this->profilingCount[$name])) {
+            $this->profilingCount[$name]++;
+        } else {
+            $this->profilingCount[$name] = 1;
+            $this->profilingTotalTime[$name] = 0;
+        }
+        $this->profilingStartTime[$name] = microtime(true);
+    }
+
+    protected function profilingEnd(string $name) : void
+    {
+        $this->profilingTotalTime[$name] +=
+            microtime(true) - $this->profilingStartTime[$name];
+    }
+
+    public function profilingReport() : void
+    {
+        asort($this->profilingTotalTime);
+        foreach($this->profilingTotalTime as $name => $time) {
+            $count = $this->profilingCount[$name];
+            echo sprintf("total %6e, count:%6d, average:%6e %s\n",$time,$count,$time/$count,$name);
+        }
+    }
+
     protected function aligned(int $size, int $dtype,int $base) : int
     {
         $valueSize = self::$valueSize[$dtype];
@@ -137,6 +175,11 @@ class Matlib
         int $n,
         Buffer $X, int $offsetX, int $incX ) : float|int
     {
+        if($this->profiling) {
+            $profilingName = sprintf("sum(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
+
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -170,6 +213,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
         return $result;
     }
 
@@ -180,6 +226,10 @@ class Matlib
         int $n,
         Buffer $X, int $offsetX, int $incX) : int
     {
+        if($this->profiling) {
+            $profilingName = sprintf("imax(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -202,6 +252,9 @@ class Matlib
                 break;
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
         return $resultIdx;
     }
 
@@ -212,6 +265,10 @@ class Matlib
         int $n,
         Buffer $X, int $offsetX, int $incX) : int
     {
+        if($this->profiling) {
+            $profilingName = sprintf("imin(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -234,6 +291,9 @@ class Matlib
                 break;
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
         return $resultIdx;
     }
 
@@ -246,6 +306,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX,
         float $beta) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("increment(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -263,6 +327,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -274,6 +341,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX,
         float $beta) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("reciprocal(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -291,6 +362,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -304,6 +378,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("maximum(m=%d,n=%d)",$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_matrix_buffer_spec("A", $A,$m,$n,$offsetA,$ldA);
@@ -331,6 +409,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -344,6 +425,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("minimum(m=%d,n=%d)",$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_matrix_buffer_spec("A", $A,$m,$n,$offsetA,$ldA);
@@ -371,6 +456,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -384,6 +472,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("greater(m=%d,n=%d)",$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_matrix_buffer_spec("A", $A,$m,$n,$offsetA,$ldA);
@@ -411,6 +503,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -424,6 +519,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("greaterEqual(m=%d,n=%d)",$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_matrix_buffer_spec("A", $A,$m,$n,$offsetA,$ldA);
@@ -450,6 +549,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -463,6 +565,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("less(m=%d,n=%d)",$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_matrix_buffer_spec("A", $A,$m,$n,$offsetA,$ldA);
@@ -489,6 +595,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -502,6 +611,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("lessEqual(m=%d,n=%d)",$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_matrix_buffer_spec("A", $A,$m,$n,$offsetA,$ldA);
@@ -529,6 +642,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -542,6 +658,10 @@ class Matlib
         Buffer $A, int $offsetA, int $ldA
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("multiply(trans=%s,m=%d,n=%d)",($trans ? 'T' : 'N'),$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
     
@@ -582,6 +702,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -596,6 +719,10 @@ class Matlib
         Buffer $A, int $offsetA, int $ldA
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("add(trans=%s,m=%d,n=%d)",($trans ? 'T' : 'N'),$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
 
@@ -635,6 +762,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -648,6 +778,10 @@ class Matlib
         Buffer $A, int $offsetA, int $ldA
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("duplicate(trans=%s,m=%d,n=%d)",($trans ? 'T' : 'N'),$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
 
@@ -687,6 +821,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -697,6 +834,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("square(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -714,6 +855,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -724,6 +868,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("sqrt(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -741,6 +889,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -752,6 +903,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX,
         float $beta) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("rsqrt(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -769,6 +924,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -782,6 +940,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX,
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("pow(trans=%s,m=%d,n=%d)",($trans ? 'T' : 'N'),$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         if($trans) {
@@ -817,6 +979,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -827,6 +992,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("exp(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -844,6 +1013,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -854,6 +1026,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("log(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -871,6 +1047,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -881,6 +1060,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("tanh(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -898,6 +1081,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -908,6 +1094,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("sin(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -925,6 +1115,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -935,6 +1128,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("cos(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -952,6 +1149,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -962,6 +1162,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("tan(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -979,6 +1183,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -989,6 +1196,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("zeros(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -1021,6 +1232,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -1034,6 +1248,10 @@ class Matlib
         Buffer $Y, int $offsetY, int $ldY
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("updateAddOnehot(m=%d,n=%d)",$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         // Check Buffer X
@@ -1071,6 +1289,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     public function softmax(
@@ -1078,6 +1299,10 @@ class Matlib
         int $n,
         Buffer $A, int $offsetA, int $ldA) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("softmax(m=%d,n=%d)",$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_matrix_buffer_spec("A", $A,$m,$n,$offsetA,$ldA);
@@ -1097,6 +1322,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -1109,6 +1337,10 @@ class Matlib
         Buffer $Y, int $offsetY, int $incY
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("equal(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         // Check Buffer X
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
@@ -1146,6 +1378,9 @@ class Matlib
                 break;
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -1158,6 +1393,10 @@ class Matlib
         Buffer $Y, int $offsetY, int $incY
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("notEqual(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         // Check Buffer X
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
@@ -1195,6 +1434,9 @@ class Matlib
                 break;
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -1206,6 +1448,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX,
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("not(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         // Check Buffer X
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
@@ -1231,6 +1477,9 @@ class Matlib
                 break;
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     public function astype(
@@ -1240,6 +1489,10 @@ class Matlib
         Buffer $Y, int $offsetY, int $incY
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("astype(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         $this->assert_vector_buffer_spec("Y", $Y,$n,$offsetY,$incY);
@@ -1254,6 +1507,9 @@ class Matlib
         if($this->ffi->rindow_matlib_astype($n, $X->dtype(), $pDataX, $incX, $Y->dtype(), $pDataY, $incY)) {
             throw new InvalidArgumentException("Unsupported data type of X or Y.");
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     public function matrixcopy(
@@ -1264,6 +1520,10 @@ class Matlib
         Buffer $A, int $offsetA, int $ldA,
         Buffer $B, int $offsetB, int $ldB) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("matrixcopy(m=%d,n=%d)",$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         if($trans) {
@@ -1308,6 +1568,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type of A.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     public function imagecopy(
@@ -1324,6 +1587,10 @@ class Matlib
         bool $rgbFlip
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("imagecopy(height=%d,width=%d,channels=%d)",$height,$width,$channels);
+            $this->profilingStart($profilingName);
+        }
         if($height<1) {
             throw new InvalidArgumentException("height must be greater then 0");
         }
@@ -1397,6 +1664,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type of A.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     public function fill(
@@ -1404,6 +1674,10 @@ class Matlib
         Buffer $V, int $offsetV,
         Buffer $X, int $offsetX, int $incX) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("fill(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         // Check Buffer V
         if($offsetV >= $V->count()) {
@@ -1419,6 +1693,9 @@ class Matlib
         $pDataV = $V->addr($offsetV);
         $pDataX = $X->addr($offsetX);
         $this->ffi->rindow_matlib_fill($X->dtype(), $n, $pDataV, $pDataX, $incX);
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     public function nan2num(
@@ -1427,6 +1704,10 @@ class Matlib
         float $alpha
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("nan2num(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -1444,6 +1725,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     public function isnan(
@@ -1451,6 +1735,10 @@ class Matlib
         Buffer $X, int $offsetX, int $incX
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("isnan(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         switch ($X->dtype()) {
@@ -1468,6 +1756,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     public function searchsorted(
@@ -1479,6 +1770,10 @@ class Matlib
         Buffer $Y, int $offsetY, int $incY // int
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("searchsorted(m=%d,n=%d)",$m,$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         // Check Buffer A
@@ -1523,6 +1818,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     public function cumsum(
@@ -1533,6 +1831,10 @@ class Matlib
         Buffer $Y, int $offsetY, int $incY // float
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("cumsum(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
     
         // Check Buffer X
@@ -1564,6 +1866,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     public function cumsumb(
@@ -1576,6 +1881,10 @@ class Matlib
         Buffer $B, int $offsetB, // float
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("cumsumb(m=%d,n=%d,k=%d)",$m,$n,$k);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_shape_parameter("k", $k);
@@ -1607,6 +1916,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     public function transpose(
@@ -1616,6 +1928,16 @@ class Matlib
         Buffer $B, int $offsetB, 
         ) : void
     {
+        if($this->profiling) {
+            $shape_str="";
+            $ndim = $sourceShape->count();
+            for($i=0;$i<$ndim;$i++) {
+                $shape_str.=$sourceShape[$i].",";
+            }
+            $shape_str = rtrim($shape_str,",");
+            $profilingName = sprintf("transpose(sourceShape=(%s))",$shape_str);
+            $this->profilingStart($profilingName);
+        }
         // Check Buffer Shape
         $ndim = $sourceShape->count();
         if($ndim<=0) {
@@ -1687,6 +2009,10 @@ class Matlib
             }
         }
 
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
+
         if($status==self::SUCCESS) {
             return;
         }
@@ -1715,6 +2041,10 @@ class Matlib
         int $upper,
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("bandpart(m=%d,n=%d,k=%d)",$m,$n,$k);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_shape_parameter("k", $k);
@@ -1743,6 +2073,9 @@ class Matlib
                 break;
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     public function topk(
@@ -1755,6 +2088,10 @@ class Matlib
         Buffer $indices, int $offsetIndices
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("topk(m=%d,n=%d,k=%d)",$m,$n,$k);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_shape_parameter("k", $k);
@@ -1799,6 +2136,9 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }        
     }
 
     /**
@@ -1815,6 +2155,10 @@ class Matlib
         Buffer $B, int $offsetB
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("gather(n=%d,k=%d,numClass=%d)",$n,$k,$numClass);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("n", $n);
         $this->assert_shape_parameter("k", $k);
         if($numClass<=0) {
@@ -1907,6 +2251,9 @@ class Matlib
                 break;
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -1923,6 +2270,11 @@ class Matlib
         Buffer $B, int $offsetB
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("reduceGather(reverse=%s,addMode=%s,m=%d,n=%d,numClass=%d)",
+                ($reverse?'true':'false'),($addMode?'true':'false'),$m,$n,$numClass);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         if($numClass<=0) {
@@ -2015,6 +2367,9 @@ class Matlib
                 break;
             }
         }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2040,6 +2395,12 @@ class Matlib
         int $offsetB,
     ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("gatherb(reverse=%s,addMode=%s,m=%d,n=%d,numClass=%d)",
+                ($reverse?'true':'false'),($addMode?'true':'false'),$m,$n,$numClass);
+            $this->profilingStart($profilingName);
+        }
+
         $this->assert_shape_parameter("m", $batches);
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
@@ -2113,6 +2474,10 @@ class Matlib
                 break;
             }
         }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2137,6 +2502,11 @@ class Matlib
         Buffer $B, int $offsetB,
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("gathernd(reverse=%s,addMode=%s,m=%d,n=%d,k=%d,indexDepth=%d)",
+                ($reverse?'true':'false'),($addMode?'true':'false'),$m,$n,$k,$indexDepth);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_shape_parameter("k", $k);
@@ -2221,6 +2591,10 @@ class Matlib
                 break;
             }
         }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2242,6 +2616,12 @@ class Matlib
         int $sizeAxis2
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("slice(reverse=%s,addMode=%s,m=%d,n=%d,k=%d,size=%d,startAxis0=%d,sizeAxis0=%d,startAxis1=%d,sizeAxis1=%d,startAxis2=%d,sizeAxis2=%d)",
+                ($reverse?'true':'false'),($addMode?'true':'false'),$m,$n,$k,$size,$startAxis0,$sizeAxis0,$startAxis1,$sizeAxis1,$startAxis2,$sizeAxis2);
+            $this->profilingStart($profilingName);
+        }
+
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_shape_parameter("k", $k);
@@ -2316,6 +2696,10 @@ class Matlib
                 break;
             }
         }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2329,6 +2713,12 @@ class Matlib
         Buffer $B, int $offsetB
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("repeat(m=%d,k=%d,repeats=%d)",
+                $m,$k,$repeats);
+            $this->profilingStart($profilingName);
+        }
+        
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("k", $k);
         if($repeats<=0) {
@@ -2375,6 +2765,10 @@ class Matlib
                 break;
             }
         }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2388,6 +2782,12 @@ class Matlib
         Buffer $B, int $offsetB
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("reducesum(m=%d,n=%d,k=%d)",
+                $m,$n,$k);
+            $this->profilingStart($profilingName);
+        }
+        
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_shape_parameter("k", $k);
@@ -2430,6 +2830,10 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2443,6 +2847,12 @@ class Matlib
         Buffer $B, int $offsetB
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("reduceMax(m=%d,n=%d,k=%d)",
+                $m,$n,$k);
+            $this->profilingStart($profilingName);
+        }
+        
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_shape_parameter("k", $k);
@@ -2485,6 +2895,10 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2498,6 +2912,12 @@ class Matlib
         Buffer $B, int $offsetB
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("reduceArgMax(m=%d,n=%d,k=%d)",
+                $m,$n,$k);
+            $this->profilingStart($profilingName);
+        }
+        
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_shape_parameter("k", $k);
@@ -2537,6 +2957,10 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2549,6 +2973,11 @@ class Matlib
         int $seed
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("randomUniform(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
+
         // Check Buffer X
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
     
@@ -2579,6 +3008,10 @@ class Matlib
                 break;
             }
         }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2591,6 +3024,11 @@ class Matlib
         int $seed
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("randomNormal(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
+
         // Check Buffer X
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
     
@@ -2609,6 +3047,10 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2620,6 +3062,12 @@ class Matlib
         int $seed
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("randomSequence(n=%d,size=%d)",
+                $n,$size);
+            $this->profilingStart($profilingName);
+        }
+        
         // Check Buffer X
         $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
         if($n<$size||$size<1) {
@@ -2631,6 +3079,10 @@ class Matlib
     
         $pDataX = $X->addr($offsetX);
         $this->ffi->rindow_matlib_i_randomsequence($n,$size,$X->dtype(),$pDataX,$incX,$seed);
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2660,6 +3112,12 @@ class Matlib
         int $cols_size
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("im2col1d(reverse=%b,batches=%d,im_w=%d,channels=%d,filter_w=%d,stride_w=%d,padding=%b,channels_first=%b,dilation_w=%d,cols_channels_first=%b)",
+                $reverse,$batches,$im_w,$channels,$filter_w,$stride_w,$padding,$channels_first,$dilation_w,$cols_channels_first);
+            $this->profilingStart($profilingName);
+        }
+        
         $this->assert_buffer_size($images, $images_offset, $images_size,
             "Invalid images buffer offset or size");
         $this->assert_buffer_size($cols, $cols_offset, $cols_size,
@@ -2723,6 +3181,10 @@ class Matlib
                 throw new RuntimeException(sprintf("Unkown Error (%d)", $rc));
             }
         }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2759,6 +3221,11 @@ class Matlib
         int $cols_size
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("im2col2d(reverse=%b,batches=%d,im_h=%d,im_w=%d,channels=%d,filter_h=%d,filter_w=%d,stride_h=%d,stride_w=%d,padding=%b,channels_first=%b,dilation_h=%d,dilation_w=%d,cols_channels_first=%b)",
+                $reverse,$batches,$im_h,$im_w,$channels,$filter_h,$filter_w,$stride_h,$stride_w,$padding,$channels_first,$dilation_h,$dilation_w,$cols_channels_first);
+            $this->profilingStart($profilingName);
+        }
         $this->assert_buffer_size($images, $images_offset, $images_size,
             "Invalid images buffer offset or size");
         $this->assert_buffer_size($cols, $cols_offset, $cols_size,
@@ -2830,6 +3297,10 @@ class Matlib
                 throw new RuntimeException(sprintf("Unkown Error (%d)", $rc));
             }
         }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2867,6 +3338,12 @@ class Matlib
         int $cols_size
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("im2col3d(reverse=%b,batches=%d,im_d=%d,im_h=%d,im_w=%d,channels=%d,filter_d=%d,filter_h=%d,filter_w=%d,stride_d=%d,stride_h=%d,stride_w=%d,padding=%b,channels_first=%b,dilation_d=%d,dilation_h=%d,dilation_w=%d,cols_channels_first=%b)",
+                $reverse,$batches,$im_d,$im_h,$im_w,$channels,$filter_d,$filter_h,$filter_w,$stride_d,$stride_h,$stride_w,$padding,$channels_first,$dilation_d,$dilation_h,$dilation_w,$cols_channels_first);
+            $this->profilingStart($profilingName);
+        }
+        
         $this->assert_buffer_size($images, $images_offset, $images_size,
             "Invalid images buffer offset or size");
         $this->assert_buffer_size($cols, $cols_offset, $cols_size,
@@ -2944,6 +3421,10 @@ class Matlib
                 throw new RuntimeException(sprintf("Unkown Error (%d)", $rc));
             }
         }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -2961,6 +3442,12 @@ class Matlib
         Buffer $A, int $offsetA,
         ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("masking(m=%d,n=%d,k=%d,len=%d,mode=%d)",
+                $m,$n,$k,$len,$mode);
+            $this->profilingStart($profilingName);
+        }
+
         $this->assert_shape_parameter("m", $m);
         $this->assert_shape_parameter("n", $n);
         $this->assert_shape_parameter("k", $k);
@@ -3015,6 +3502,10 @@ class Matlib
                 throw new InvalidArgumentException("Unsupported data type.");
             }
         }
+        
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -3033,6 +3524,17 @@ class Matlib
         int $ndimC,
     ) : void
     {
+        if($this->profiling) {
+            $sizeOfIndices_str="";
+            $ndim = $sizeOfIndices->count();
+            for($i=0;$i<$ndim;$i++) {
+                $sizeOfIndices_str.=$sizeOfIndices[$i].",";
+            }
+            $sizeOfIndices_str = rtrim($sizeOfIndices_str,",");
+            $profilingName = sprintf("einsum(sizeOfIndices=(%s),ndimC=%d)", $sizeOfIndices_str,$ndimC);
+            $this->profilingStart($profilingName);
+        }
+
         if($offsetA<0) {
             throw new InvalidArgumentException("Argument offsetA must be greater than or equals 0.");
         }
@@ -3115,6 +3617,10 @@ class Matlib
                 }
             }
         }
+        
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
     }
 
     /**
@@ -3144,6 +3650,11 @@ class Matlib
         int $offsetC,
     ) : void
     {
+        if($this->profiling) {
+            $profilingName = sprintf("einsum4p1(dim0=%d,dim1=%d,dim2=%d,dim3=%d,dim4=%d)", $dim0,$dim1,$dim2,$dim3,$dim4);
+            $this->profilingStart($profilingName);
+        }
+
         if($offsetA<0) {
             throw new InvalidArgumentException("Argument offsetA must be greater than or equals 0.");
         }
@@ -3240,6 +3751,9 @@ class Matlib
                     throw new RuntimeException(sprintf("Unkown Error (%d)", $rc));
                 }
             }
+        }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
         }
     }
 }
