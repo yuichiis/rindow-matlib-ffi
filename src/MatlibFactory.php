@@ -15,13 +15,13 @@ class MatlibFactory
     private static ?string $libFile = null;
 
     protected string $lowestVersion = "1.1.0";
-    protected string $overVersion   = "3.0.0";
+    protected string $overVersion   = "2.0.0";
     protected ?string $currentVersion;
 
     /** @var array<string> $libs_win */
     protected array $libs_win = ['rindowmatlib.dll'];
     /** @var array<string> $libs_linux */
-    protected array $libs_linux = ['librindowmatlib.so.2', 'librindowmatlib.so'];
+    protected array $libs_linux = ['librindowmatlib.so.1', 'librindowmatlib.so'];
     /** @var array<string> $libs_mac */
     protected array $libs_mac = ['librindowmatlib.dylib', '/usr/local/lib/librindowmatlib.dylib', '/usr/lib/librindowmatlib.dylib'];
     protected ?string $error = null;

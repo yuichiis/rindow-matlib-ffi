@@ -2396,8 +2396,8 @@ class Matlib
     ) : void
     {
         if($this->profiling) {
-            $profilingName = sprintf("gatherb(reverse=%s,addMode=%s,m=%d,n=%d,numClass=%d)",
-                ($reverse?'true':'false'),($addMode?'true':'false'),$m,$n,$numClass);
+            $profilingName = sprintf("gatherb(reverse=%s,addMode=%s,batches=%d,m=%d,n=%d,k=%d,len=%d,numClass=%d)",
+                ($reverse?'true':'false'),($addMode?'true':'false'),$batches,$m,$n,$k,$len,$numClass);
             $this->profilingStart($profilingName);
         }
 
