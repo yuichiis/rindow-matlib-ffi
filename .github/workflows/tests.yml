@@ -65,7 +65,7 @@ jobs:
       - name: Composer
         run: |
           composer update
-          composer require --dev phpunit/phpunit=^${{ matrix.phpunit }}
+          composer require --dev "phpunit/phpunit={{ matrix.phpunit }}.*"
 
       - name: PHP Static Analysys
         run: phpstan
