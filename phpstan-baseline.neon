@@ -1,6 +1,13 @@
 parameters:
 	ignoreErrors:
 		-
-			message: "#^Call to an undefined method FFI\\:\\:rindow_matlib_common_get_version\\(\\)\\.$#"
+			message: '#^Variable \$profilingName might not be defined\.$#'
+			identifier: variable.undefined
+			count: 60
+			path: src/Matlib.php
+
+		-
+			message: '#^Call to an undefined method FFI\:\:rindow_matlib_common_get_version\(\)\.$#'
+			identifier: method.notFound
 			count: 1
 			path: src/MatlibFactory.php
