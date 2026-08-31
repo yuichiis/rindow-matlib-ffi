@@ -32,9 +32,9 @@ jobs:
           - os: macos-latest
             php: '8.5'
             phpunit: '11.5'
-          - os: macos-13
-            php: '8.5'
-            phpunit: '11.5'
+          #- os: macos-13
+          #  php: '8.5'
+          #  phpunit: '11.5'
 
     name: PHP ${{ matrix.php }} on ${{ matrix.os }}
 
@@ -45,7 +45,7 @@ jobs:
           php-version: ${{ matrix.php }}
           # PHP Extras
           coverage: none
-          tools: composer, phpstan
+          tools: composer, phpstan:2.1.x
           #ini-values: "memory_limit=512M"
           extensions: ffi, mbstring
         env:
