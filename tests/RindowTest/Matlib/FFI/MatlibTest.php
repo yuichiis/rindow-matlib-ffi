@@ -3044,6 +3044,14 @@ class MatlibTest extends TestCase
  
         $max = $matlib->imax($N,$XX,$offX,$incX);
         $this->assertEquals(1,$max);
+
+        // incX=2
+        $X = $this->array([100,1000, 0, 10],dtype:$dtype);
+        [$N,$XX,$offX,$incX] =
+            $this->translate_amin($X);
+        $max = $matlib->imax(2,$XX,0,2);
+        $this->assertEquals(0,$max);
+
     }
  
     public function testMaxMinusN()
@@ -12310,6 +12318,109 @@ class MatlibTest extends TestCase
         $this->assertNotEquals(
             $x->toArray(),
             $y->toArray());
+    }
+
+    #[DataProvider('providerDtypesFloats')]
+    public function testRandomCategorical($params)
+    {
+        extract($params);
+        $matlib = $this->getMatlib();
+
+        $batchSize = 20;
+        $numClasses = 10;
+        $numSamples = 2;
+        $seed = 12345;
+        $logits = $this->zeros([$batchSize,$numClasses],dtype:$dtype);
+        for($i=0;$i<$batchSize;$i++){
+            for($j=0;$j<$numClasses;$j++){
+                $logits->buffer()[$i*$numClasses+$j] = (float)rand(-10,10);
+            }
+        }
+        $samplesA = $this->zeros([$batchSize,$numSamples],dtype:NDArray::int32);
+        $matlib->randomCategorical(
+            $batchSize,
+            $numClasses,
+            $numSamples,
+            $logits->buffer(),$logits->offset(),
+            $samplesA->buffer(),$samplesA->offset(),
+            $seed,
+        );
+        $max = $samplesA->buffer()[$matlib->imax($samplesA->count(),$samplesA->buffer(),0,1)];
+        $min = $samplesA->buffer()[$matlib->imin($samplesA->count(),$samplesA->buffer(),0,1)];
+        $this->assertLessThanOrEqual($numClasses-1,$max);
+        $this->assertGreaterThanOrEqual(0,$min);
+
+        $batchSize = 2;
+        $numClasses = 10;
+        $numSamples = 20;
+        $seed = 12345;
+        $logits = $this->zeros([$batchSize,$numClasses],dtype:$dtype);
+        for($i=0;$i<$batchSize;$i++){
+            for($j=0;$j<$numClasses;$j++){
+                $logits->buffer()[$i*$numClasses+$j] = (float)rand(-10,10);
+            }
+        }
+        $samplesA = $this->zeros([$batchSize,$numSamples],dtype:NDArray::int32);
+        $matlib->randomCategorical(
+            $batchSize,
+            $numClasses,
+            $numSamples,
+            $logits->buffer(),$logits->offset(),
+            $samplesA->buffer(),$samplesA->offset(),
+            $seed,
+        );
+        $max = $samplesA->buffer()[$matlib->imax($samplesA->count(),$samplesA->buffer(),0,1)];
+        $min = $samplesA->buffer()[$matlib->imin($samplesA->count(),$samplesA->buffer(),0,1)];
+        $this->assertLessThanOrEqual($numClasses-1,$max);
+        $this->assertGreaterThanOrEqual(0,$min);
+
+    }
+
+    public function testPcg32rand()
+    {
+        $matlib = $this->getMatlib();
+        $rnd = $this->zeros([2],NDArray::int64)->buffer();
+        $matlib->pcg32Srand($rnd,12345,67890);
+
+        $random1 = $matlib->pcg32rand($rnd);
+        $random2 = $matlib->pcg32rand($rnd);
+        $random3 = $matlib->pcg32rand($rnd);
+        $this->assertNotEquals($random1,$random2);
+        $this->assertNotEquals($random2,$random3);
+    }
+
+    public function testPcg32randInt32()
+    {
+        $matlib = $this->getMatlib();
+        $rnd = $this->zeros([2],NDArray::int64)->buffer();
+        $matlib->pcg32Srand($rnd,1234,67890);
+
+        $max = -1000;
+        $min = 1000;
+        for($i=0;$i<10000;$i++){
+            $random = $matlib->pcg32randInt32($rnd,-10,10);
+            if($random > $max){$max = $random;}
+            if($random < $min){$min = $random;}
+        }
+        $this->assertEquals(-10,$min);
+        $this->assertEquals(10,$max);
+    }
+
+    public function testPcg32randInt64()
+    {
+        $matlib = $this->getMatlib();
+        $rnd = $this->zeros([2],NDArray::int64)->buffer();
+        $matlib->pcg32Srand($rnd,1234,67890);
+
+        $max = -1000;
+        $min = 1000;
+        for($i=0;$i<10000;$i++){
+            $random = $matlib->pcg32randInt64($rnd,-10,10);
+            if($random > $max){$max = $random;}
+            if($random < $min){$min = $random;}
+        }
+        $this->assertEquals(-10,$min);
+        $this->assertEquals(10,$max);
     }
 
     #[DataProvider('providerDtypesFloats')]

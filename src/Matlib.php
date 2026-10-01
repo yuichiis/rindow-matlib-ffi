@@ -3086,6 +3086,171 @@ class Matlib
     }
 
     /**
+    */
+    public function randomCategorical(
+        int $batchSize,
+        int $numClasses,
+        int $numSamples,
+        Buffer $logits, int $logitsOffset,
+        Buffer $samples, int $samplesOffset,
+        int $seed
+        ) : void
+    {
+        if($this->profiling) {
+            $profilingName = sprintf("randomCategorical(batchSize=%d,numSamples=%d,numClasses=%d)",$batchSize,$numSamples,$numClasses);
+            $this->profilingStart($profilingName);
+        }
+
+        $this->assert_shape_parameter("batchSize", $batchSize);
+        $this->assert_shape_parameter("numClasses", $numClasses);
+        $this->assert_shape_parameter("numSamples", $numSamples);
+        // Check Buffer logits
+        $this->assert_vector_buffer_spec("logits", $logits,$batchSize*$numClasses,$logitsOffset,1);
+        // Check Buffer samples
+        $this->assert_vector_buffer_spec("samples", $samples,$batchSize*$numSamples,$samplesOffset,1);
+    
+        switch($logits->dtype()) {
+            case NDArray::float32: {
+                $pDataLogits = $logits->addr($logitsOffset);
+                $pDataSamples = $samples->addr($samplesOffset);
+                $this->ffi->rindow_matlib_s_randomcategorical($batchSize,$numClasses,$numSamples,$pDataLogits,$pDataSamples,$seed);
+                break;
+            }
+            case NDArray::float64: {
+                $pDataLogits = $logits->addr($logitsOffset);
+                $pDataSamples = $samples->addr($samplesOffset);
+                $this->ffi->rindow_matlib_d_randomcategorical($batchSize,$numClasses,$numSamples,$pDataLogits,$pDataSamples,$seed);
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException("Unsupported data type.");
+            }
+        }
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
+    }
+
+    public function pcg32Srand(
+        Buffer $rngState,
+        int $seed,
+        int $sequence,
+        ) : void
+    {
+        if($this->profiling) {
+            $profilingName = sprintf("pcg32Srand(seed=%d, sequence=%d)",$seed,$sequence);
+            $this->profilingStart($profilingName);
+        }
+
+        if($rngState->count()!=2 || $rngState->dtype()!=NDArray::int64) {
+            throw new InvalidArgumentException("Buffer rngState is illegal.");
+        }
+        $pRngState = $rngState->addr(0);
+    
+        $this->ffi->rindow_matlib_pcg32srand($pRngState,$seed,$sequence);
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
+    }
+
+    public function pcg32Step(
+        Buffer $rngState,
+        ) : void
+    {
+        if($this->profiling) {
+            $profilingName = sprintf("pcg32Step()");
+            $this->profilingStart($profilingName);
+        }
+
+        if($rngState->count()!=2 || $rngState->dtype()!=NDArray::int64) {
+            throw new InvalidArgumentException("Buffer rngState is illegal.");
+        }
+        $pRngState = $rngState->addr(0);
+    
+        $this->ffi->rindow_matlib_pcg32step($pRngState);
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
+    }
+
+    public function pcg32rand(
+        Buffer $rngState,
+        ) : int
+    {
+        if($this->profiling) {
+            $profilingName = sprintf("pcg32rand()");
+            $this->profilingStart($profilingName);
+        }
+
+        if($rngState->count()!=2 || $rngState->dtype()!=NDArray::int64) {
+            throw new InvalidArgumentException("Buffer rngState is illegal.");
+        }
+        $pRngState = $rngState->addr(0);
+    
+        $next = $this->ffi->rindow_matlib_pcg32rand($pRngState);
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
+
+        return $next;
+    }
+
+    public function pcg32randInt32(
+        Buffer $rngState,
+        int $low,
+        int $high,
+        ) : int
+    {
+        if($this->profiling) {
+            $profilingName = sprintf("pcg32randInt32(low=%d, high=%d)",$low,$high);
+            $this->profilingStart($profilingName);
+        }
+
+        if($rngState->count()!=2 || $rngState->dtype()!=NDArray::int64) {
+            throw new InvalidArgumentException("Buffer rngState is illegal.");
+        }
+        $pRngState = $rngState->addr(0);
+    
+        $rand = $this->ffi->rindow_matlib_pcg32randint32($pRngState,$low,$high);
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
+        
+        return $rand;
+    }
+
+    public function pcg32randInt64(
+        Buffer $rngState,
+        int $low,
+        int $high,
+        ) : int
+    {
+        if($this->profiling) {
+            $profilingName = sprintf("pcg32randInt64(low=%d, high=%d)",$low,$high);
+            $this->profilingStart($profilingName);
+        }
+
+        if($rngState->count()!=2 || $rngState->dtype()!=NDArray::int64) {
+            throw new InvalidArgumentException("Buffer rngState is illegal.");
+        }
+        $pRngState = $rngState->addr(0);
+    
+        $rand = $this->ffi->rindow_matlib_pcg32randint64($pRngState,$low,$high);
+
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
+        
+        return $rand;
+    }
+
+
+    /**
     * images: (n,h,w,c) : channels_last
     *        (n,c,h,w) : channels_first
     * strides:
