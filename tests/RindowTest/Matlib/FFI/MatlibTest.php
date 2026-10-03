@@ -60,6 +60,11 @@ class Range
     }
 }
 
+function C(float|int $real, float|int $imag) : object
+{
+    return (object)['real' => (float)$real, 'imag' => (float)$imag];
+}
+
 class MatlibTest extends TestCase
 {
     public function getMatlib()
@@ -383,6 +388,25 @@ class MatlibTest extends TestCase
             $a += $X[$offsetX+$i*$incX];
         }
         return $a;
+    }
+
+    public function isclose(Buffer $X, Buffer $Y, float $rtol=1e-5, float $atol=1e-8)
+    {
+        if($X->dtype()!=$Y->dtype()) {
+            throw new InvalidArgumentException('dtype must be same');
+        }
+        $nx = count($X);
+        $ny = count($Y);
+        if($nx!=$ny) {
+            return false;
+        }
+        for($i=0;$i<$nx;$i++) {
+            $diff = abs($X[$i]-$Y[$i]);
+            if($diff> $rtol*max(abs($X[$i]),abs($Y[$i]))+$atol) {
+                return false;
+            }
+        }
+        return true;
     }
 
     protected function printableShapes($values)
@@ -2663,6 +2687,18 @@ class MatlibTest extends TestCase
             'int64i64' => [[
                 'dtype' => NDArray::int64,
                 'indexdtype' => NDArray::int64,
+            ]],
+        ];
+    }
+
+    public static function providerDtypesComplexes()
+    {
+        return [
+            'complex64' => [[
+                'dtype' => NDArray::complex64,
+            ]],
+            'complex128' => [[
+                'dtype' => NDArray::complex128,
             ]],
         ];
     }
@@ -11650,6 +11686,47 @@ class MatlibTest extends TestCase
         $this->assertEquals($single,$y[2]->toArray());
         $this->assertEquals($single,$y[3]->toArray());
         $this->assertEquals($single,$y[4]->toArray());
+    }
+
+    #[DataProvider('providerDtypesFloats')]
+    public function testabs($params)
+    {
+        extract($params);
+        $matlib = $this->getMatlib();
+        $X = $this->array([-1.0,-0.5,0.0,0.5,1.0], dtype:$dtype);
+        $n = 5;
+        $XX = $X->buffer();
+        $offX = 0;
+        $incX = 1;
+        $matlib->abs($n,$XX,$offX,$incX);
+
+        $R = $this->array([1.0,0.5,0.0,0.5,1.0], dtype:$dtype);
+        $this->assertTrue($this->isclose($R->buffer(),$X->buffer()));
+    }
+
+    #[DataProvider('providerDtypesComplexes')]
+    public function testabsComplex($params)
+    {
+        extract($params);
+        $matlib = $this->getMatlib();
+        $X = $this->array([C(1,2), C(-3,4), C(0,0)], dtype:$dtype);
+        if($dtype==NDArray::complex64) {
+            $ydtype = NDArray::float32;
+        } else {
+            $ydtype = NDArray::float64;
+        }
+        $Y = $this->array([0.0,0.0,0.0], dtype:$ydtype);
+        $n = 3;
+        $XX = $X->buffer();
+        $offX = 0;
+        $incX = 1;
+        $YY = $Y->buffer();
+        $offY = 0;
+        $incY = 1;
+        $matlib->cabs($n,$XX,$offX,$incX,$YY,$offY,$incY);
+
+        $R = $this->array([sqrt(1*1+2*2), sqrt(3*3+4*4), sqrt(0*0+0*0)], dtype:$ydtype);
+        $this->assertTrue($this->isclose($R->buffer(),$Y->buffer()));
     }
 
     public function testequal()

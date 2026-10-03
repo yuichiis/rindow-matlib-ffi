@@ -1327,6 +1327,79 @@ class Matlib
         }
     }
 
+    public function abs(
+        int $n,
+        Buffer $X, int $offsetX, int $incX) : void
+    {
+        if($this->profiling) {
+            $profilingName = sprintf("abs(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
+        $this->assert_shape_parameter("n", $n);
+        $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
+    
+        switch ($X->dtype()) {
+            case NDArray::float32: {
+                $pDataX = $X->addr($offsetX);
+                $this->ffi->rindow_matlib_s_abs($n, $pDataX, $incX);
+                break;
+            }
+            case NDArray::float64: {
+                $pDataX = $X->addr($offsetX);
+                $this->ffi->rindow_matlib_d_abs($n, $pDataX, $incX);
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException("Unsupported data type.");
+            }
+        }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
+    }
+
+    public function cabs(
+        int $n,
+        Buffer $X, int $offsetX, int $incX,
+        Buffer $Y, int $offsetY, int $incY
+        ) : void
+    {
+        if($this->profiling) {
+            $profilingName = sprintf("cabs(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
+        $this->assert_shape_parameter("n", $n);
+        $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
+        $this->assert_vector_buffer_spec("Y", $Y,$n,$offsetY,$incY);
+    
+        switch ($X->dtype()) {
+            case NDArray::complex64: {
+                if($Y->dtype()!=NDArray::float32) {
+                    throw new InvalidArgumentException("Data type of BufferY must be float32");
+                }
+                $pDataX = $X->addr($offsetX);
+                $pDataY = $Y->addr($offsetY);
+                $this->ffi->rindow_matlib_c_abs($n, $pDataX, $incX, $pDataY, $incY);
+                break;
+            }
+            case NDArray::complex128: {
+                if($Y->dtype()!=NDArray::float64) {
+                    throw new InvalidArgumentException("Data type of BufferY must be float64");
+                }
+                $pDataX = $X->addr($offsetX);
+                $pDataY = $Y->addr($offsetY);
+                $this->ffi->rindow_matlib_z_abs($n, $pDataX, $incX, $pDataY, $incY);
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException("Unsupported data type.");
+            }
+        }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
+    }
+
     /**
      * Y(i) := 1  ( X(i) == Y(i) )
      * Y(i) := 0  ( X(i) != Y(i) )

@@ -150,6 +150,10 @@ int32_t rindow_matlib_s_onehot(int32_t dtype, int32_t m, int32_t n, void *x, int
 int32_t rindow_matlib_d_onehot(int32_t dtype, int32_t m, int32_t n, void *x, int32_t incX, double alpha, double *a, int32_t ldA);
 void rindow_matlib_s_softmax(int32_t m, int32_t n, float *a, int32_t ldA);
 void rindow_matlib_d_softmax(int32_t m, int32_t n, double *a, int32_t ldA);
+void rindow_matlib_s_abs(int32_t n, float *x, int32_t incX);
+void rindow_matlib_d_abs(int32_t n, double *x, int32_t incX);
+void rindow_matlib_c_abs(int32_t n, void *x, int32_t incX, float *y, int32_t incY);
+void rindow_matlib_z_abs(int32_t n, void *x, int32_t incX, double *y, int32_t incY);
 // ********************************************************
 // This function is unofficial.
 // It may be changed without notice.
