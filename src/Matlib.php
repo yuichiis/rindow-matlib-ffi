@@ -1358,14 +1358,14 @@ class Matlib
         }
     }
 
-    public function cabs(
+    public function absComplex(
         int $n,
         Buffer $X, int $offsetX, int $incX,
         Buffer $Y, int $offsetY, int $incY
         ) : void
     {
         if($this->profiling) {
-            $profilingName = sprintf("cabs(n=%d)",$n);
+            $profilingName = sprintf("absComplex(n=%d)",$n);
             $this->profilingStart($profilingName);
         }
         $this->assert_shape_parameter("n", $n);

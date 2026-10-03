@@ -11723,7 +11723,7 @@ class MatlibTest extends TestCase
         $YY = $Y->buffer();
         $offY = 0;
         $incY = 1;
-        $matlib->cabs($n,$XX,$offX,$incX,$YY,$offY,$incY);
+        $matlib->absComplex($n,$XX,$offX,$incX,$YY,$offY,$incY);
 
         $R = $this->array([sqrt(1*1+2*2), sqrt(3*3+4*4), sqrt(0*0+0*0)], dtype:$ydtype);
         $this->assertTrue($this->isclose($R->buffer(),$Y->buffer()));
