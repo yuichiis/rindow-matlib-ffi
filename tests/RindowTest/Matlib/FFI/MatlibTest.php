@@ -7482,6 +7482,38 @@ class MatlibTest extends TestCase
         $this->assertEquals([[1,4],[2,5],[3,6]],$B->toArray());
     }
 
+    #[DataProvider('providerDtypesComplexes')]
+    public function testTranspose2DNormalComplex($params)
+    {
+        extract($params);
+        $matlib = $this->getMatlib();
+
+        $A = $this->array([[C(1,11),C(2,12),C(3,13)],[C(4,14),C(5,15),C(6,16)]],dtype:$dtype);
+        $B = $this->zeros([3,2],dtype:$dtype);
+        [
+            $sourceShape,
+            $permBuf,
+            $AA, $offsetA,
+            $BB, $offsetB,
+        ] = $this->translate_transpose($A,[1,0],$B);
+
+        $matlib->transpose(
+            $sourceShape,
+            $permBuf,
+            $AA, $offsetA,
+            $BB, $offsetB,
+        );
+
+        $R = [[C(1,11),C(4,14)],[C(2,12),C(5,15)],[C(3,13),C(6,16)]];
+        $BArray = $B->toArray();
+        foreach ($BArray as $i => $BRow) {
+            foreach($BRow as $j => $BV) {
+                $this->assertEquals($R[$i][$j]->real,$BV->real);
+                $this->assertEquals($R[$i][$j]->imag,$BV->imag);
+            }
+        }
+    }
+
     #[DataProvider('providerDtypesFloatsAndInteger32')]
     public function testTranspose3DNormal($params)
     {

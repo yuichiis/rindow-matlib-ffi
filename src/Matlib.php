@@ -2169,7 +2169,9 @@ class Matlib
             case NDArray::int32:
             case NDArray::uint32:
             case NDArray::int64:
-            case NDArray::uint64: {
+            case NDArray::uint64:
+            case NDArray::complex64:
+            case NDArray::complex128: {
                 $pDataA = $A->addr($offsetA);
                 $pDataB = $B->addr($offsetB);
                 $status = $this->ffi->rindow_matlib_i_transpose($A->dtype(), $ndim, $shapevals, $permvals, $pDataA, $pDataB);
