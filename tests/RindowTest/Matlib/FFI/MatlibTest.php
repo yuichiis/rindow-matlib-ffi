@@ -11,11 +11,10 @@ use Rindow\Matlib\FFI\Matlib;
 use InvalidArgumentException;
 use RuntimeException;
 use LogicException;
-use OutOfRangeException;
 use TypeError;
-use ArrayObject;
-use ArrayAccess;
-use SplFixedArray;
+require_once __DIR__.'/Utils.php';
+use RindowTest\Matlib\FFI\Utils;
+use function RindowTest\Matlib\FFI\C;
 
 function R(
     int $start,
@@ -60,300 +59,15 @@ class Range
     }
 }
 
-function C(float|int $real, float|int $imag) : object
-{
-    return (object)['real' => (float)$real, 'imag' => (float)$imag];
-}
-
 class MatlibTest extends TestCase
 {
+    use Utils;
+
     public function getMatlib()
     {
         $factory = new MatlibFactory();
         $matlib = $factory->Matlib();
         return $matlib;
-    }
-
-    public function zeros(array $shape,?int $dtype=null)
-    {
-        $ndarray = $this->array(null,$dtype,$shape);
-        $buffer = $ndarray->buffer();
-        $size = $buffer->count();
-        for($i=0;$i<$size;$i++) {
-            $buffer[$i] = 0;
-        }
-        return $ndarray;
-    }
-
-    public function ones(array $shape,?int $dtype=null)
-    {
-        $ndarray = $this->array(null,$dtype,$shape);
-        $buffer = $ndarray->buffer();
-        $size = $buffer->count();
-        if($dtype==NDArray::bool) {
-            $value = true;
-        } else {
-            $value = 1;
-        }
-        for($i=0;$i<$size;$i++) {
-            $buffer[$i] = $value;
-        }
-        return $ndarray;
-    }
-
-    public function zerosLike(object $ndarray)
-    {
-        return $this->zeros($ndarray->shape(),$ndarray->dtype());
-    }
-
-    public function arange(int $count ,$start=null, $step=null, $dtype=null)
-    {
-        if($start===null)
-            $start = 0;
-        if($step===null)
-            $step = 1;
-        if($dtype===null) {
-            if(is_int($start))
-                $dtype = NDArray::int32;
-            else
-                $dtype = NDArray::float32;
-        }
-        $array = $this->zeros([$count], $dtype);
-        $buffer = $array->buffer();
-        $n = $start;
-        for($i=0; $i<$count; $i++) {
-            $buffer[$i] = $n;
-            $n += $step;
-        }
-        return $array;
-    }
-
-    public function array(int|float|array|null $array=null, ?int $dtype=null, ?array $shape=null) : object
-    {
-        $ndarray = new class ($array, $dtype, $shape) implements NDArray {
-            protected object $buffer;
-            protected int $size;
-            protected int $dtype;
-            protected int $offset;
-            protected array $shape;
-            public function __construct(int|float|array|Buffer|null $array=null, ?int $dtype=null, ?array $shape=null, ?int $offset=null) {
-                $dtype = $dtype ?? NDArray::float32;
-                $offset = $offset ?? 0;
-                if(is_array($array)||$array instanceof ArrayObject) {
-                    $dummyBuffer = new ArrayObject();
-                    $idx = 0;
-                    $this->array2Flat($array,$dummyBuffer,$idx,$prepare=true);
-                    $buffer = $this->newBuffer($idx,$dtype);
-                    $idx = 0;
-                    $this->array2Flat($array,$buffer,$idx,$prepare=false);
-                    if($shape===null) {
-                        $shape = $this->genShape($array);
-                    }
-                } elseif(is_numeric($array)||is_bool($array)) {
-                    if(is_bool($array)&&$dtype!=NDArray::bool) {
-                        throw new InvalidArgumentException("unmatch dtype with bool value");
-                    }
-                    $buffer = $this->newBuffer(1,$dtype);
-                    $buffer[0] = $array;
-                    if($shape===null) {
-                        $shape = [];
-                    }
-                    $this->checkShape($shape);
-                    if(array_product($shape)!=1)
-                        throw new InvalidArgumentException("Invalid dimension size");
-                } elseif($array===null && $shape!==null) {
-                    $this->checkShape($shape);
-                    $size = (int)array_product($shape);
-                    $buffer = $this->newBuffer($size,$dtype);
-                } elseif($array===null && $shape!==null) {
-                    $this->checkShape($shape);
-                    $size = (int)array_product($shape);
-                    $buffer = $this->newBuffer($size,$dtype);
-                } elseif($this->isBuffer($array)) {
-                    if($offset===null||!is_int($offset))
-                        throw new InvalidArgumentException("Must specify offset with the buffer");
-                    if($shape===null)
-                        throw new InvalidArgumentException("Invalid dimension size");
-                    $buffer = $array;
-                } else {
-                    var_dump($array);var_dump($shape);
-                    throw new \Exception("Illegal array type");
-                }
-                $this->buffer = $buffer;
-                $this->size = $buffer->count();
-                $this->dtype = $buffer->dtype();
-                $this->shape = $shape;
-                $this->offset = $offset;
-            }
-
-            function newBuffer($size,$dtype) : object
-            {
-                return new Buffer($size,$dtype);
-            }
-            
-            protected function isBuffer($buffer)
-            {
-                if($buffer instanceof SplFixedArray || $buffer instanceof Buffer) {
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-        
-            protected function array2Flat($A, $F, &$idx, $prepare)
-            {
-                if(is_array($A)) {
-                    ksort($A);
-                } elseif($A instanceof ArrayObject) {
-                    $A->ksort();
-                }
-        
-                $num = null;
-                foreach ($A as $key => $value) {
-                    if(!is_int($key))
-                        throw new InvalidArgumentException("Dimension must be integer");
-                    if(is_array($value)||$value instanceof ArrayObject) {
-                        $num2 = $this->array2Flat($value, $F, $idx, $prepare);
-                        if($num===null) {
-                            $num = $num2;
-                        } else {
-                            if($num!=$num2)
-                                throw new InvalidArgumentException("The shape of the dimension is broken");
-                        }
-                    } else {
-                        if($num!==null)
-                            throw new InvalidArgumentException("The shape of the dimension is broken");
-                        if(!$prepare)
-                            $F[$idx] = $value;
-                        $idx++;
-                    }
-                }
-                return count($A);
-            }
-
-            protected function flat2Array($F, &$idx, array $shape)
-            {
-                $size = array_shift($shape);
-                if(count($shape)) {
-                    $A = [];
-                    for($i=0; $i<$size; $i++) {
-                        $A[$i] = $this->flat2Array($F,$idx,$shape);
-                    }
-                }  else {
-                    $A = [];
-                    for($i=0; $i<$size; $i++) {
-                        $A[$i] = $F[$idx];
-                        $idx++;
-                    }
-                }
-                return $A;
-            }
-                
-            protected function genShape($A)
-            {
-                $shape = [];
-                while(is_array($A) || $A instanceof ArrayObject) {
-                    $shape[] = count($A);
-                    $A = $A[0];
-                }
-                return $shape;
-            }
-        
-            protected function checkShape(array $shape)
-            {
-                foreach($shape as $num) {
-                    if(!is_int($num)) {
-                        throw new InvalidArgumentException(
-                            "Invalid shape numbers. It gives ".gettype($num));
-                    }
-                    if($num<=0) {
-                        throw new InvalidArgumentException(
-                            "Invalid shape numbers. It gives ".$num);
-                    }
-                }
-            }
-
-            public function toArray()
-            {
-                if(count($this->shape)==0) {
-                    return $this->buffer[$this->offset];
-                }
-                $idx = $this->offset;
-                return $this->flat2Array($this->buffer, $idx, $this->shape);
-            }
-
-            public function shape() : array { return $this->shape; }
-
-            public function ndim() : int { return count($this->shape); }
-        
-            public function dtype() { return $this->dtype; }
-        
-            public function buffer() : ArrayAccess { return $this->buffer; }
-        
-            public function offset() : int { return $this->offset; }
-        
-            public function size() : int { return $this->buffer->count(); }
-        
-            public function reshape(array $shape) : NDArray
-            {
-                if(array_product($shape)==array_product($this->shape)) {
-                    $this->shape = $shape;
-                } else {
-                    throw new \Exception("unmatch shape");
-                }
-                return $this;
-            }
-            public function offsetExists( $offset ) : bool { throw new \Excpetion('not implement'); }
-            public function offsetGet( $offset ) : mixed
-            {
-                if(is_array($offset)) {
-                    throw new InvalidArgumentException("offset style is old renge style.");
-                }
-                // for single index specification
-                if(is_numeric($offset)) {
-                    $shape = $this->shape;
-                    $max = array_shift($shape);
-                    if(count($shape)==0) {
-                        return $this->buffer[$this->offset+$offset];
-                    }
-                    $size = (int)array_product($shape);
-                    $new = new self($this->buffer,$this->dtype,$shape,$this->offset+$offset*$size);
-                    return $new;
-                }
-
-                // for range spesification
-                $shape = $this->shape;
-                array_shift($shape);
-                if(is_array($offset)) {
-                    $start = $offset[0];
-                    $limit = $offset[1]+1;
-                } else {
-                    $start = $offset->start();
-                    $limit = $offset->limit();
-                }
-                $rowsCount = $limit-$start;
-                if(count($shape)>0) {
-                    $itemSize = (int)array_product($shape);
-                } else {
-                    $itemSize = 1;
-                }
-                if($rowsCount<0) {
-                    throw new OutOfRangeException('Invalid range');
-                }
-                array_unshift($shape,$rowsCount);
-                $size = (int)array_product($shape);
-                $new = new self($this->buffer,$this->dtype,$shape,$this->offset+$start*$itemSize);
-                return $new;
-            }
-            public function offsetSet( $offset , $value ) : void { throw new \Exception('not implement'); }
-            public function offsetUnset( $offset ) : void { throw new \Exception('not implement'); }
-            public function count() : int
-            {
-                return $this->buffer->count();
-            }
-            public function  getIterator() : Traversable  { throw new \Exception('not implement'); }
-        };
-        return $ndarray;
     }
 
 
@@ -2557,6 +2271,55 @@ class MatlibTest extends TestCase
         ];
     }
 
+    public function translate_omatcopy(
+        NDArray $A,
+        ?bool $trans=null,
+        float|object|null $alpha=null,
+        ?NDArray $B=null,
+        ?bool $conj=null,
+        ) : array
+    {
+        [$trans,$conj] = $this->complementTrans($trans,$conj,$A->dtype());
+
+        if($A->ndim()!=2 || $B->ndim()!=2) {
+            throw new InvalidArgumentException('Dimensions must be 2D-NDArray');
+        }
+        [$rows,$cols] = $A->shape();
+        if($trans) {
+            [$rows,$cols] = [$cols,$rows];
+        }
+        if($B->shape()!=[$rows,$cols]) {
+            $shapeError = '('.implode(',',$A->shape()).'),('.implode(',',$B->shape()).')';
+            throw new InvalidArgumentException("Unmatch shape of dimension: ".$shapeError);
+        }
+
+        [$M,$N] = $A->shape();
+        if($alpha===null) {
+            if($this->isComplex($A->dtype())) {
+                $alpha = C(1.0);
+            } else {
+                $alpha = 1.0;
+            }
+        }
+        $AA = $A->buffer();
+        $offA = $A->offset();
+        $ldA = $N;
+        $BB = $B->buffer();
+        $offB = $B->offset();
+        $ldB = $cols;
+
+        $trans = $this->transToCode($trans,$conj);
+        $order = BLAS::RowMajor;
+
+        return [
+            $order,$trans,
+            $M,$N,
+            $alpha,
+            $AA, $offA, $ldA,
+            $BB, $offB, $ldB,
+        ];
+    }
+
     public static function providerDtypesFloats()
     {
         return [
@@ -2565,6 +2328,36 @@ class MatlibTest extends TestCase
             ]],
             'float64' => [[
                 'dtype' => NDArray::float64,
+            ]],
+        ];
+    }
+
+    public static function providerDtypesAllInteger()
+    {
+        return [
+            'int8' => [[
+                'dtype' => NDArray::int8,
+            ]],
+            'uint8' => [[
+                'dtype' => NDArray::uint8,
+            ]],
+            'int16' => [[
+                'dtype' => NDArray::int16,
+            ]],
+            'uint16' => [[
+                'dtype' => NDArray::uint16,
+            ]],
+            'int32' => [[
+                'dtype' => NDArray::int32,
+            ]],
+            'uint32' => [[
+                'dtype' => NDArray::uint32,
+            ]],
+            'int64' => [[
+                'dtype' => NDArray::int64,
+            ]],
+            'uint64' => [[
+                'dtype' => NDArray::uint64,
             ]],
         ];
     }
@@ -11729,6 +11522,138 @@ class MatlibTest extends TestCase
         $this->assertTrue($this->isclose($R->buffer(),$Y->buffer()));
     }
 
+    #[DataProvider('providerDtypesFloats')]
+    public function testRangeFloat($params)
+    {
+        extract($params);
+        $matlib = $this->getMatlib();
+
+        $X = $this->array([255,255,255,255,255,255], dtype:$dtype);
+        $n = 6;
+        $XX = $X->buffer();
+        $offX = 0;
+        $incX = 1;
+        $start = 1;
+        $limit = 11;
+        $delta = 2;
+        $matlib->range($n,$XX,$offX,$incX,$start,$limit,$delta);
+
+        $R = $this->array([1,3,5,7,9,11], dtype:$dtype);
+        $this->assertTrue($this->isclose($R->buffer(),$X->buffer()));
+        $this->assertGreaterThan($X[5],$limit);
+
+
+        $X = $this->array([255,255,255,255,255,255], dtype:$dtype);
+        $n = 6;
+        $XX = $X->buffer();
+        $offX = 0;
+        $incX = 1;
+        $start = 12;
+        $limit = 2;
+        $delta = -2;
+        $matlib->range($n,$XX,$offX,$incX,$start,$limit,$delta);
+
+        $R = $this->array([12,10,8,6,4,2], dtype:$dtype);
+        $this->assertTrue($this->isclose($R->buffer(),$X->buffer()));
+        $this->assertLessThan($X[5],$limit);
+    }
+
+    #[DataProvider('providerDtypesAllInteger')]
+    public function testRangeAllInteger($params)
+    {
+        extract($params);
+        $matlib = $this->getMatlib();
+
+        $X = $this->array([255,255,255,255,255,255], dtype:$dtype);
+        $n = 6;
+        $XX = $X->buffer();
+        $offX = 0;
+        $incX = 1;
+        $start = 1;
+        $limit = 11;
+        $delta = 2;
+        $matlib->range($n,$XX,$offX,$incX,$start,$limit,$delta);
+        $R = $this->array([1,3,5,7,9,10], dtype:$dtype);
+        $this->assertTrue($this->isclose($R->buffer(),$X->buffer()));
+        $this->assertGreaterThan($X[5],$limit);
+
+
+        $X = $this->array([255,255,255,255,255,255], dtype:$dtype);
+        $n = 6;
+        $XX = $X->buffer();
+        $offX = 0;
+        $incX = 1;
+        $start = 12;
+        $limit = 2;
+        $delta = -2;
+        $matlib->range($n,$XX,$offX,$incX,$start,$limit,$delta);
+        $R = $this->array([12,10,8,6,4,3], dtype:$dtype);
+        $this->assertTrue($this->isclose($R->buffer(),$X->buffer()));
+        $this->assertLessThan($X[5],$limit);
+
+        $X = $this->array([255,255,255,255,255,255], dtype:$dtype);
+        $n = 3;
+        $XX = $X->buffer();
+        $offX = 0;
+        $starts = [1,11];
+        $limits = [4,16];
+        $deltas = [1,2];
+        $incX = count($starts);
+        foreach($starts as $i=>$start) {
+            $limit = $limits[$i];
+            $delta = $deltas[$i];
+            $matlib->range($n,$XX,$offX,$incX,$start,$limit,$delta);
+            $offX++;
+        }
+        $R = $this->array([1,11,2,13,3,15], dtype:$dtype);
+        $this->assertTrue($this->isclose($R->buffer(),$X->buffer()));
+    }
+
+    #[DataProvider('providerDtypesFloats')]
+    public function testLinspaceAllTypes($params)
+    {
+        extract($params);
+        $matlib = $this->getMatlib();
+
+        $X = $this->array([255,255,255,255,255,255], dtype:$dtype);
+        $n = 6;
+        $XX = $X->buffer();
+        $offX = 0;
+        $incX = 1;
+        $start = 1;
+        $stop = 11;
+        $matlib->linspace($n,$XX,$offX,$incX,$start,$stop);
+        $R = $this->array([1,3,5,7,9,11], dtype:$dtype);
+        $this->assertTrue($this->isclose($R->buffer(),$X->buffer()));
+
+        $X = $this->array([255,255,255,255,255,255], dtype:$dtype);
+        $n = 6;
+        $XX = $X->buffer();
+        $offX = 0;
+        $incX = 1;
+        $start = 11;
+        $stop = 1;
+        $matlib->linspace($n,$XX,$offX,$incX,$start,$stop);
+        $R = $this->array([11,9,7,5,3,1], dtype:$dtype);
+        $this->assertTrue($this->isclose($R->buffer(),$X->buffer()));
+
+        $X = $this->array([255,255,255,255,255,255], dtype:$dtype);
+        $n = 3;
+        $XX = $X->buffer();
+        $offX = 0;
+        $starts = [1,11];
+        $stops = [3,13];
+        $incX = count($starts);
+        foreach($starts as $i=>$start) {
+            $stop = $stops[$i];
+            $matlib->linspace($n,$XX,$offX,$incX,$start,$stop);
+            $offX++;
+        }
+        $R = $this->array([1,11,2,12,3,13], dtype:$dtype);
+        $this->assertTrue($this->isclose($R->buffer(),$X->buffer()));
+    }
+
+
     public function testequal()
     {
         $matlib = $this->getMatlib();
@@ -13002,4 +12927,201 @@ class MatlibTest extends TestCase
         ],$c->toArray());
     }
 
+    public function testOmatcopyNormal()
+    {
+        $matlib = $this->getMatlib();
+
+        // float32
+        $dtype = NDArray::float32;
+        $A = $this->array([
+            [1,2,3],
+            [4,5,6],
+            [7,8,9],
+            [10,11,12],
+        ],dtype:$dtype);
+        $B = $this->zeros([3,4],dtype:$dtype);
+
+        [
+            $order,$trans,
+            $M,$N,
+            $alpha,
+            $AA, $offA, $ldA,
+            $BB, $offB, $ldB,
+        ] = $this->translate_omatcopy($A,trans:true,B:$B);
+
+        $matlib->omatcopy(
+            $order,$trans,
+            $M,$N,
+            $alpha,
+            $AA, $offA, $ldA,
+            $BB, $offB, $ldB,
+        );
+
+        $this->assertEquals([
+            [1,4,7,10],
+            [2,5,8,11],
+            [3,6,9,12],
+        ],$B->toArray());
+
+        if(!$this->notSupportComplex()) {
+            // complex64 trans and conj
+            $A = $this->array($this->toComplex([
+                [C(1,i:100),C(2,i:200),3],
+                [4,5,6],
+                [7,8,9],
+                [10,11,12],
+            ]),dtype:NDArray::complex64);
+            $B = $this->zeros([3,4],dtype:NDArray::complex64);
+
+            [
+                $order,$trans,
+                $M,$N,
+                $alpha,
+                $AA, $offA, $ldA,
+                $BB, $offB, $ldB,
+            ] = $this->translate_omatcopy($A,trans:true,B:$B);
+
+            $matlib->omatcopy(
+                $order,$trans,
+                $M,$N,
+                $alpha,
+                $AA, $offA, $ldA,
+                $BB, $offB, $ldB,
+            );
+
+            $this->assertEquals($this->toComplex([
+                [C(1,i:-100),4,7,10],
+                [C(2,i:-200),5,8,11],
+                [3,6,9,12],
+            ]),$this->toComplex($B->toArray()));
+
+            // complex64  trans and no_conj
+            $A = $this->array($this->toComplex([
+                [C(1,i:100),C(2,i:200),3],
+                [4,5,6],
+                [7,8,9],
+                [10,11,12],
+            ]),dtype:NDArray::complex64);
+            $B = $this->zeros([3,4],dtype:NDArray::complex64);
+
+            [
+                $order,$trans,
+                $M,$N,
+                $alpha,
+                $AA, $offA, $ldA,
+                $BB, $offB, $ldB,
+            ] = $this->translate_omatcopy($A,trans:true,conj:false,B:$B);
+            $matlib->omatcopy(
+                $order,$trans,
+                $M,$N,
+                $alpha,
+                $AA, $offA, $ldA,
+                $BB, $offB, $ldB,
+            );
+
+            $this->assertEquals($this->toComplex([
+                [C(1,i:100),4,7,10],
+                [C(2,i:200),5,8,11],
+                [3,6,9,12],
+            ]),$this->toComplex($B->toArray()));
+
+
+            // complex64  no_trans and conj
+            $A = $this->array($this->toComplex([
+                [C(1,i:100),C(2,i:200),3],
+                [4,5,6],
+                [7,8,9],
+                [10,11,12],
+            ]),dtype:NDArray::complex64);
+            $B = $this->zeros([4,3],dtype:NDArray::complex64);
+
+            [
+                $order,$trans,
+                $M,$N,
+                $alpha,
+                $AA, $offA, $ldA,
+                $BB, $offB, $ldB,
+            ] = $this->translate_omatcopy($A,trans:false,conj:true,B:$B);
+            $matlib->omatcopy(
+                $order,$trans,
+                $M,$N,
+                $alpha,
+                $AA, $offA, $ldA,
+                $BB, $offB, $ldB,
+            );
+
+            $this->assertEquals($this->toComplex([
+                [C(1,i:-100),C(2,i:-200),3],
+                [4,5,6],
+                [7,8,9],
+                [10,11,12],
+            ]),$this->toComplex($B->toArray()));
+        }
+
+        // float64
+        $type = NDArray::float64;
+        $A = $this->array([
+            [1,2,3],
+            [4,5,6],
+            [7,8,9],
+            [10,11,12],
+        ],dtype:$type);
+        $B = $this->zeros([3,4],dtype:$type);
+
+        [
+            $order,$trans,
+            $M,$N,
+            $alpha,
+            $AA, $offA, $ldA,
+            $BB, $offB, $ldB,
+        ] = $this->translate_omatcopy($A,trans:true,B:$B);
+
+        $matlib->omatcopy(
+            $order,$trans,
+            $M,$N,
+            $alpha,
+            $AA, $offA, $ldA,
+            $BB, $offB, $ldB,
+        );
+
+        $this->assertEquals([
+            [1,4,7,10],
+            [2,5,8,11],
+            [3,6,9,12],
+        ],$B->toArray());
+
+        if(!$this->notSupportComplex()) {
+            // complex128
+            $type = NDArray::complex128;
+            $A = $this->array($this->toComplex([
+                [1,2,3],
+                [4,5,6],
+                [7,8,9],
+                [10,11,12],
+            ]),dtype:$type);
+            $B = $this->zeros([3,4],dtype:$type);
+
+            [
+                $order,$trans,
+                $M,$N,
+                $alpha,
+                $AA, $offA, $ldA,
+                $BB, $offB, $ldB,
+            ] = $this->translate_omatcopy($A,trans:true,B:$B);
+
+            $matlib->omatcopy(
+                $order,$trans,
+                $M,$N,
+                $alpha,
+                $AA, $offA, $ldA,
+                $BB, $offB, $ldB,
+            );
+
+            $this->assertEquals($this->toComplex([
+                [1,4,7,10],
+                [2,5,8,11],
+                [3,6,9,12],
+            ]),$this->toComplex($B->toArray()));
+        }
+    }
 }

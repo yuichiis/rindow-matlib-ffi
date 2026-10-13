@@ -3,6 +3,7 @@ namespace Rindow\Matlib\FFI;
 
 use Interop\Polite\Math\Matrix\NDArray;
 use Interop\Polite\Math\Matrix\LinearBuffer as Buffer;
+use Interop\Polite\Math\Matrix\BLAS;
 use InvalidArgumentException;
 use RuntimeException;
 use DomainException;
@@ -98,6 +99,29 @@ class Matlib
     public function __construct(FFI $ffi)
     {
         $this->ffi = $ffi;
+    }
+
+    protected function toComplex(object $from,int $dtype) : object
+    {
+        $ffi = $this->ffi;
+        switch($dtype) {
+            case NDArray::complex64: {
+                $to = $ffi->new('matlib_complex_float');
+                $to->real = $from->real;
+                $to->imag = $from->imag;
+                break;
+            }
+            case NDArray::complex128: {
+                $to = $ffi->new('matlib_complex_double');
+                $to->real = $from->real;
+                $to->imag = $from->imag;
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException('Unsuppored data type');
+            }
+        }
+        return $to;
     }
 
     public function getNumThreads() : int
@@ -1393,6 +1417,80 @@ class Matlib
             }
             default: {
                 throw new InvalidArgumentException("Unsupported data type.");
+            }
+        }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
+    }
+
+    public function linspace(
+        int $n,
+        Buffer $X, int $offsetX, int $incX,
+        int|float $start,
+        int|float $stop,
+        ) : void
+    {
+        if($this->profiling) {
+            $profilingName = sprintf("linspace(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
+        $this->assert_shape_parameter("n", $n);
+        $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
+    
+        switch ($X->dtype()) {
+            case NDArray::float32: {
+                $pDataX = $X->addr($offsetX);
+                $this->ffi->rindow_matlib_s_linspace($n, $pDataX, $incX, $start, $stop);
+                break;
+            }
+            case NDArray::float64: {
+                $pDataX = $X->addr($offsetX);
+                $this->ffi->rindow_matlib_d_linspace($n, $pDataX, $incX, $start, $stop);
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException("Unsupported data type.");
+            }
+        }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
+    }
+
+    public function range(
+        int $n,
+        Buffer $X, int $offsetX, int $incX,
+        int|float $start,
+        int|float $limit,
+        int|float $delta,
+        ) : void
+    {
+        if($this->profiling) {
+            $profilingName = sprintf("range(n=%d)",$n);
+            $this->profilingStart($profilingName);
+        }
+        $this->assert_shape_parameter("n", $n);
+        $this->assert_vector_buffer_spec("X", $X,$n,$offsetX,$incX);
+    
+        switch ($X->dtype()) {
+            case NDArray::float32: {
+                $pDataX = $X->addr($offsetX);
+                $this->ffi->rindow_matlib_s_range($n, $pDataX, $incX, $start, $limit, $delta);
+                break;
+            }
+            case NDArray::float64: {
+                $pDataX = $X->addr($offsetX);
+                $this->ffi->rindow_matlib_d_range($n, $pDataX, $incX, $start, $limit, $delta);
+                break;
+            }
+            default: {
+                if(!$this->is_integer_dtype($X->dtype())) {
+                    throw new InvalidArgumentException("Unsupported data type.");
+                }
+                $pDataX = $X->addr($offsetX);
+                $this->ffi->rindow_matlib_i_range($X->dtype(), $n, $pDataX, $incX, (int)$start, (int)$limit, (int)$delta);
+                break;
             }
         }
         if($this->profiling) {
@@ -3994,4 +4092,171 @@ class Matlib
             $this->profilingEnd($profilingName);
         }
     }
+
+    public function omatcopy(
+        int $order,
+        int $trans,
+        int $m,
+        int $n,
+        float|object $alpha,
+        Buffer $A, int $offsetA, int $ldA,
+        Buffer $B, int $offsetB, int $ldB,
+    ) : void
+    {
+        $ffi = $this->ffi;
+        $this->assert_shape_parameter("m", $m);
+        $this->assert_shape_parameter("n", $n);
+
+        // Check Buffer size X and Y
+        if($trans==BLAS::NoTrans || $trans==BLAS::ConjNoTrans ) {
+            $rows = $m; $cols = $n;
+        } elseif($trans==BLAS::Trans || $trans==BLAS::ConjTrans) {
+            $rows = $n; $cols = $m;
+        } else {
+            throw new InvalidArgumentException("unknown transpose mode for buffer.");
+        }
+        $this->assert_matrix_buffer_spec("A", $A, $m, $n, $offsetA, $ldA);
+
+        // Check Buffer B
+        $this->assert_matrix_buffer_spec("B", $B, $rows, $cols, $offsetB, $ldB);
+
+        // Check Buffer A and B
+        if($A->dtype()!=$B->dtype()) {
+            throw new InvalidArgumentException("Unmatch data type for A and B");
+        }
+
+        switch($A->dtype()) {
+            case NDArray::float32:{
+                $ffi->rindow_matlib_s_omatcopy(
+                    $order,
+                    $trans,
+                    $m,$n,
+                    $alpha,
+                    $A->addr($offsetA),$ldA,
+                    $B->addr($offsetB),$ldB
+                );
+                break;
+            }
+            case NDArray::float64:{
+                $ffi->rindow_matlib_d_omatcopy(
+                    $order,
+                    $trans,
+                    $m,$n,
+                    $alpha,
+                    $A->addr($offsetA),$ldA,
+                    $B->addr($offsetB),$ldB
+                );
+                break;
+            }
+            case NDArray::complex64:{
+                $alpha = $this->toComplex($alpha,$A->dtype());  // *** CAUTION ***
+                $alphaptr = FFI::addr($alpha);                  // To keep object instance.
+                $ffi->rindow_matlib_c_omatcopy(
+                    $order,
+                    $trans,
+                    $m,$n,
+                    $alphaptr,
+                    $A->addr($offsetA),$ldA,
+                    $B->addr($offsetB),$ldB
+                );
+                break;
+            }
+            case NDArray::complex128:{
+                $alpha = $this->toComplex($alpha,$A->dtype());  // *** CAUTION ***
+                $alphaptr = FFI::addr($alpha);                  // To keep object instance.
+                $ffi->rindow_matlib_z_omatcopy(
+                    $order,
+                    $trans,
+                    $m,$n,
+                    $alphaptr,
+                    $A->addr($offsetA),$ldA,
+                    $B->addr($offsetB),$ldB
+                );
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException('Unsuppored data type');
+            }
+        }
+    }
+
+    public function where(
+        bool $trans,
+        int $m,
+        int $n,
+        Buffer $C, int $offsetC, int $kindC,
+        Buffer $X, int $offsetX, int $kindX,
+        Buffer $Y, int $offsetY, int $kindY,
+        Buffer $out, int $offsetOut
+    ) : void
+    {
+        $ffi = $this->ffi;
+        $this->assert_shape_parameter("m", $m);
+        $this->assert_shape_parameter("n", $n);
+
+        // Check Buffer size C
+        $this->assert_generic_buffer_spec("C", $C, $trans, $m, $n, $offsetC, $kindC);
+
+        // Check Buffer size X
+        $this->assert_generic_buffer_spec("X", $X, $trans, $m, $n, $offsetX, $kindX);
+
+        // Check Buffer size Y
+        $this->assert_generic_buffer_spec("Y", $Y, $trans, $m, $n, $offsetY, $kindY);
+
+        // Check Buffer size out
+        $this->assert_buffer_size($out, $offsetOut, $m*$n, "out buffer is too small.");
+
+        //echo "trans:$trans\n";
+        //echo "m:$m,n:$n\n";
+        //echo "C->count:".$C->count()."offsetC:$offsetC, kindC:$kindC\n";
+        //echo "X->count:".$X->count()."offsetX:$offsetX, kindX:$kindX\n";
+        //echo "Y->count:".$Y->count()."offsetY:$offsetY, kindY:$kindY\n";
+        //echo "out->count:".$out->count()."offsetOut:$offsetOut\n";
+        //throw new \RuntimeException("Test");
+
+        if($trans) {
+            $transCode = self::TRANS;
+        } else {
+            $transCode = self::NO_TRANS;
+        }
+        // Check Buffer A and B
+        if($C->dtype()!=NDArray::bool) {
+            throw new InvalidArgumentException("C must be boolean.");
+        }
+        if($X->dtype()!=$Y->dtype()) {
+            throw new InvalidArgumentException("Unmatch data type for X and Y");
+        }
+        if($X->dtype()!=$out->dtype()) {
+            throw new InvalidArgumentException("Unmatch data type for X, Y and out");
+        }
+
+        switch($X->dtype()) {
+            case NDArray::float32:{
+                $ffi->rindow_matlib_s_where(
+                    $transCode,
+                    $m,$n,
+                    $C->addr($offsetC), $kindC,
+                    $X->addr($offsetX), $kindX,
+                    $Y->addr($offsetY), $kindY,
+                    $out->addr($offsetOut)
+                );
+                break;
+            }
+            case NDArray::float64:{
+                $ffi->rindow_matlib_d_where(
+                    $transCode,
+                    $m,$n,
+                    $C->addr($offsetC), $kindC,
+                    $X->addr($offsetX), $kindX,
+                    $Y->addr($offsetY), $kindY,
+                    $out->addr($offsetOut)
+                );
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException('Unsuppored data type');
+            }
+        }
+    }
+
 }

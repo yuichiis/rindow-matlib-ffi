@@ -37,6 +37,14 @@ enum rindow_matlib_dtype {
     rindow_matlib_dtype_complex64 = 17
 };
 
+typedef double xdouble;
+//#define openblas_complex_STRUCT
+struct _matlib_complex_float { float real, imag; };
+struct _matlib_complex_double { double real, imag; };
+struct _matlib_complex_xdouble { xdouble real, imag; };
+typedef struct _matlib_complex_float matlib_complex_float;
+typedef struct _matlib_complex_double matlib_complex_double;
+typedef struct _matlib_complex_xdouble matlib_complex_xdouble;
 
 
 /*Set the number of threads on runtime.*/
@@ -154,6 +162,11 @@ void rindow_matlib_s_abs(int32_t n, float *x, int32_t incX);
 void rindow_matlib_d_abs(int32_t n, double *x, int32_t incX);
 void rindow_matlib_c_abs(int32_t n, void *x, int32_t incX, float *y, int32_t incY);
 void rindow_matlib_z_abs(int32_t n, void *x, int32_t incX, double *y, int32_t incY);
+void rindow_matlib_d_range(int32_t n, double *x, int32_t incX, double start, double limit, double delta);
+void rindow_matlib_s_range(int32_t n, float *x, int32_t incX, float start, float limit, float delta);
+void rindow_matlib_i_range(int32_t dtype, int32_t n,void *x, int32_t incX, int64_t start, int64_t limit, int64_t delta);
+void rindow_matlib_s_linspace(int32_t n, float *x, int32_t incX, float start, float stop);
+void rindow_matlib_d_linspace(int32_t n, double *x, int32_t incX, double start, double stop);
 // ********************************************************
 // This function is unofficial.
 // It may be changed without notice.
@@ -244,6 +257,35 @@ void rindow_matlib_pcg32step(int64_t *rng);
 uint32_t rindow_matlib_pcg32rand(int64_t *rng);
 int32_t rindow_matlib_pcg32randint32(int64_t *rng,int32_t min,int32_t max);
 int64_t rindow_matlib_pcg32randint64(int64_t *rng,int64_t min,int64_t max);
+
+void rindow_matlib_s_omatcopy(
+    int32_t order, int32_t trans, int32_t m, int32_t n,
+    float alpha, const float *a, int32_t ldA, float *b, int32_t ldB);
+void rindow_matlib_d_omatcopy(
+    int32_t order, int32_t trans, int32_t m, int32_t n,
+    double alpha, const double *a, int32_t ldA, double *b, int32_t ldB);
+void rindow_matlib_c_omatcopy(
+    int32_t order, int32_t trans, int32_t m, int32_t n,
+    const void *alpha, const void *a, int32_t ldA,
+    void *b, int32_t ldB);
+void rindow_matlib_z_omatcopy(
+    int32_t order, int32_t trans, int32_t m, int32_t n,
+    const void *alpha, const void *a, int32_t ldA,
+    void *b, int32_t ldB);
+
+void rindow_matlib_s_where(
+    int32_t trans,int32_t m,int32_t n,
+    const uint8_t *cond, int32_t kindC,
+    const float *x, int32_t kindX,
+    const float *y, int32_t kindY,
+    float *out);
+
+void rindow_matlib_d_where(
+    int32_t trans,int32_t m,int32_t n,
+    const uint8_t *cond, int32_t kindC,
+    const double *x, int32_t kindX,
+    const double *y, int32_t kindY,
+    double *out);
 
 int32_t rindow_matlib_im2col1d(
     int32_t dtype,int32_t reverse,

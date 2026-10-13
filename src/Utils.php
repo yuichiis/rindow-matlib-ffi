@@ -5,9 +5,14 @@ use InvalidArgumentException;
 
 use Interop\Polite\Math\Matrix\LinearBuffer as BufferInterface;
 use Interop\Polite\Math\Matrix\NDArray;
+use Interop\Polite\Math\Matrix\BLAS;
 
 trait Utils
 {
+    protected const WHERE_MATRIX = 0;
+    protected const WHERE_VECTOR = 1;
+    protected const WHERE_SCALAR = 2;
+
     /** @var array<int,bool> $integer_dtypes */
     protected array $integer_dtypes = [
         NDArray::int8 => true,
@@ -80,6 +85,44 @@ trait Utils
     {
         if($size<1 || $offset<0 || count($buffer) < $offset+$size) {
             throw new InvalidArgumentException($message);
+        }
+    }
+    
+    protected function assert_generic_buffer_spec(
+        string $name, BufferInterface $buffer,
+        bool $trans, int $m, int $n, int $offset, int $kind) : void
+    {
+        if($offset<0) {
+            throw new InvalidArgumentException("Argument offset$name must be greater than or equals 0.");
+        }
+        $size = $buffer->count();
+        switch($kind) {
+            case self::WHERE_MATRIX: {
+                if($size > $m*$n+$offset) {
+                    throw new InvalidArgumentException("Matrix specification too large for buffer$name.");
+                }
+                break;
+            }
+            case self::WHERE_VECTOR: {
+                if($trans) {
+                    $vecSize = $m;
+                } else {
+                    $vecSize = $n;
+                }
+                if($size > $vecSize+$offset) {
+                    throw new InvalidArgumentException("Vector specification too large for buffer$name.");
+                }
+                break;
+            }
+            case self::WHERE_SCALAR: {
+                if($size > 1+$offset) {
+                    throw new InvalidArgumentException("Scalar specification too large for buffer$name.");
+                }
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException("Invalid kind $kind for buffer$name");
+            }
         }
     }
     
