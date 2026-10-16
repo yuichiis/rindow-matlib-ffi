@@ -3306,8 +3306,8 @@ class Matlib
     }
 
     /**
-     *   Y[m,numClass] = count(A[m,n] == label)  =>  trans: false
-     *   Y[numClass,n] = count(A[n,m] == label)  =>  trans: true
+     *   B[m,numClass] = count(A[m,n] == label)  =>  trans: false
+     *   B[numClass,n] = count(A[n,m] == label)  =>  trans: true
      */
     public function bincount(
         bool $trans,
