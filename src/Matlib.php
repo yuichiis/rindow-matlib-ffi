@@ -3315,7 +3315,7 @@ class Matlib
         int $n,
         int $numClass,
         Buffer $A, int $offsetA,  // label data  (2D)
-        Buffer $Y, int $offsetY   // count label data (2D)
+        Buffer $B, int $offsetB   // count label data (2D)
         ) : void
     {
         if($this->profiling) {
@@ -3338,26 +3338,26 @@ class Matlib
         // Check Buffer A
         $this->assert_matrix_buffer_spec("A", $A,$rows,$cols,$offsetA,$cols);
     
-        // Check Buffer Y
-        $this->assert_matrix_buffer_spec("Y", $Y,$rows,$numClass,$offsetY,$numClass);
+        // Check Buffer B
+        $this->assert_matrix_buffer_spec("B", $B,$rows,$numClass,$offsetB,$numClass);
     
-        // Check Buffer A and Y
-        if($A->dtype()!=$Y->dtype()) {
-            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$Y->dtype()];
-            throw new InvalidArgumentException("Unmatch data type for A and Y: ".$types);
+        // Check Buffer A and B
+        if($A->dtype()!=$B->dtype()) {
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$B->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and B: ".$types);
         }
     
         switch ($A->dtype()) {
             case NDArray::int32: {
                 $pDataA = $A->addr($offsetA);
-                $pDataY = $Y->addr($offsetY);
-                $this->ffi->rindow_matlib_i32_bincount($transCode, $m, $n, $numClass, $pDataA, $pDataY);
+                $pDataB = $B->addr($offsetB);
+                $this->ffi->rindow_matlib_i32_bincount($transCode, $m, $n, $numClass, $pDataA, $pDataB);
                 break;
             }
             case NDArray::int64: {
                 $pDataA = $A->addr($offsetA);
-                $pDataY = $Y->addr($offsetY);
-                $this->ffi->rindow_matlib_i64_bincount($transCode, $m, $n, $numClass, $pDataA, $pDataY);
+                $pDataB = $B->addr($offsetB);
+                $this->ffi->rindow_matlib_i64_bincount($transCode, $m, $n, $numClass, $pDataA, $pDataB);
                 break;
             }
             default: {
