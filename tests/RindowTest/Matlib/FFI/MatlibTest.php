@@ -2332,6 +2332,18 @@ class MatlibTest extends TestCase
         ];
     }
 
+    public static function providerDtypesInt32Int64()
+    {
+        return [
+            'int32' => [[
+                'dtype' => NDArray::int32,
+            ]],
+            'int64' => [[
+                'dtype' => NDArray::int64,
+            ]],
+        ];
+    }
+
     public static function providerDtypesAllInteger()
     {
         return [
@@ -12408,6 +12420,79 @@ class MatlibTest extends TestCase
         $this->assertLessThanOrEqual($numClasses-1,$max);
         $this->assertGreaterThanOrEqual(0,$min);
 
+    }
+
+    #[DataProvider('providerDtypesInt32Int64')]
+    public function testBincount($params)
+    {
+        extract($params);
+        $matlib = $this->getMatlib();
+
+        // ===== trans: false ======
+        $trans = false;
+        $batchSize = 2;
+        $numSamples = 4;
+        $numClasses = 3;
+        $labels = $this->array([
+            [0,1,2,0],
+            [1,1,0,2],
+        ],dtype:$dtype);
+        $this->assertEquals($labels->shape(),[$batchSize,$numSamples]);
+        $output = $this->ones([$batchSize,$numClasses],dtype:$dtype);
+        $matlib->bincount(
+            $trans,
+            $batchSize,
+            $numSamples,
+            $numClasses,
+            $labels->buffer(),$labels->offset(),
+            $output->buffer(),$output->offset()
+        );
+        $expected = [
+            [2,1,1],
+            [1,2,1],
+        ];
+        $this->assertEquals($expected,$output->toArray());
+        $this->assertEquals(
+            [
+                [0,1,2,0],
+                [1,1,0,2],
+            ],
+            $labels->toArray()
+        );
+
+        // ====== trans: true ======
+        $trans = true;
+        $batchSize = 4;
+        $numSamples = 2;
+        $numClasses = 3;
+        $labels = $this->array([
+            [0,1,2,0],
+            [1,1,0,2],
+        ],dtype:$dtype);
+        $this->assertEquals($labels->shape(),[$numSamples,$batchSize]);
+        $output = $this->ones([$numClasses,$batchSize],dtype:$dtype);
+        $matlib->bincount(
+            $trans,
+            $numSamples,
+            $batchSize,
+            $numClasses,
+            $labels->buffer(),$labels->offset(),
+            $output->buffer(),$output->offset()
+        );
+
+        $expected = [
+            [1,0,1,1],
+            [1,2,0,0],
+            [0,0,1,1],
+        ];
+        $this->assertEquals($expected,$output->toArray());
+        $this->assertEquals(
+            [
+                [0,1,2,0],
+                [1,1,0,2],
+            ],
+            $labels->toArray()
+        );
     }
 
     public function testPcg32rand()

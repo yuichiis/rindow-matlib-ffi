@@ -251,6 +251,8 @@ void rindow_matlib_d_randomnormal(int32_t n,double *x, int32_t incX,double mean,
 void rindow_matlib_i_randomsequence(int32_t n,int32_t size,int32_t dtype,void *x, int32_t incX,int32_t seed);
 void rindow_matlib_s_randomcategorical(int32_t batchSize,int32_t numClasses,int32_t numSamples,const float *logits,int32_t *y,int64_t seed);
 void rindow_matlib_d_randomcategorical(int32_t batchSize,int32_t numClasses,int32_t numSamples,const double *logits,int32_t *y,int64_t seed);
+void rindow_matlib_i32_bincount(int32_t trans, int32_t m, int32_t n, int32_t numClasses, const int32_t *input, int32_t *output);
+void rindow_matlib_i64_bincount(int32_t trans, int32_t m, int32_t n, int32_t numClasses, const int64_t *input, int64_t *output);
 
 void rindow_matlib_pcg32srand(int64_t *rng,int64_t seed,int64_t sequence);
 void rindow_matlib_pcg32step(int64_t *rng);

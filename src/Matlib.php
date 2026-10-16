@@ -3305,6 +3305,71 @@ class Matlib
         }
     }
 
+    /**
+     *   Y[m,numClass] = count(A[m,n] == label)  =>  trans: false
+     *   Y[numClass,n] = count(A[n,m] == label)  =>  trans: true
+     */
+    public function bincount(
+        bool $trans,
+        int $m,
+        int $n,
+        int $numClass,
+        Buffer $A, int $offsetA,  // label data  (2D)
+        Buffer $Y, int $offsetY   // count label data (2D)
+        ) : void
+    {
+        if($this->profiling) {
+            $profilingName = sprintf("bincount(trans=%s,m=%d,n=%d,numClasses=%d)",($trans ? 'T' : 'N'),$m,$n,$numClasses);
+            $this->profilingStart($profilingName);
+        }
+        $this->assert_shape_parameter("m", $m);
+        $this->assert_shape_parameter("n", $n);
+    
+        if($trans) {
+            $transCode = self::TRANS;
+            $rows = $n;
+            $cols = $m;
+        } else {
+            $transCode = self::NO_TRANS;
+            $rows = $m;
+            $cols = $n;
+        }
+        $this->assert_shape_parameter("numClass", $numClass);
+        // Check Buffer A
+        $this->assert_matrix_buffer_spec("A", $A,$rows,$cols,$offsetA,$cols);
+    
+        // Check Buffer Y
+        $this->assert_matrix_buffer_spec("Y", $Y,$rows,$numClass,$offsetY,$numClass);
+    
+        // Check Buffer A and Y
+        if($A->dtype()!=$Y->dtype()) {
+            $types = $this->dtypeToString[$A->dtype()].','.$this->dtypeToString[$Y->dtype()];
+            throw new InvalidArgumentException("Unmatch data type for A and Y: ".$types);
+        }
+    
+        switch ($A->dtype()) {
+            case NDArray::int32: {
+                $pDataA = $A->addr($offsetA);
+                $pDataY = $Y->addr($offsetY);
+                $this->ffi->rindow_matlib_i32_bincount($transCode, $m, $n, $numClass, $pDataA, $pDataY);
+                break;
+            }
+            case NDArray::int64: {
+                $pDataA = $A->addr($offsetA);
+                $pDataY = $Y->addr($offsetY);
+                $this->ffi->rindow_matlib_i64_bincount($transCode, $m, $n, $numClass, $pDataA, $pDataY);
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException("Unsupported data type.");
+            }
+        }
+        if($this->profiling) {
+            $this->profilingEnd($profilingName);
+        }
+    }
+
+
     public function pcg32Srand(
         Buffer $rngState,
         int $seed,
