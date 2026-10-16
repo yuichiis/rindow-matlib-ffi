@@ -12423,7 +12423,7 @@ class MatlibTest extends TestCase
     }
 
     #[DataProvider('providerDtypesInt32Int64')]
-    public function testBincount($params)
+    public function testBincountNormal($params)
     {
         extract($params);
         $matlib = $this->getMatlib();
@@ -12490,6 +12490,79 @@ class MatlibTest extends TestCase
             [
                 [0,1,2,0],
                 [1,1,0,2],
+            ],
+            $labels->toArray()
+        );
+    }
+
+    #[DataProvider('providerDtypesInt32Int64')]
+    public function testBincountClassOverflow($params)
+    {
+        extract($params);
+        $matlib = $this->getMatlib();
+
+        // ===== trans: false ======
+        $trans = false;
+        $batchSize = 2;
+        $numSamples = 4;
+        $numClasses = 3;
+        $labels = $this->array([
+            [0,-1,2,0],
+            [1, 1,0,3],
+        ],dtype:$dtype);
+        $this->assertEquals($labels->shape(),[$batchSize,$numSamples]);
+        $output = $this->ones([$batchSize,$numClasses],dtype:$dtype);
+        $matlib->bincount(
+            $trans,
+            $batchSize,
+            $numSamples,
+            $numClasses,
+            $labels->buffer(),$labels->offset(),
+            $output->buffer(),$output->offset()
+        );
+        $expected = [
+            [2,0,1],
+            [1,2,0],
+        ];
+        $this->assertEquals($expected,$output->toArray());
+        $this->assertEquals(
+            [
+                [0,-1,2,0],
+                [1, 1,0,3],
+            ],
+            $labels->toArray()
+        );
+
+        // ====== trans: true ======
+        $trans = true;
+        $batchSize = 4;
+        $numSamples = 2;
+        $numClasses = 3;
+        $labels = $this->array([
+            [0,-1,2,0],
+            [1, 1,0,3],
+        ],dtype:$dtype);
+        $this->assertEquals($labels->shape(),[$numSamples,$batchSize]);
+        $output = $this->ones([$numClasses,$batchSize],dtype:$dtype);
+        $matlib->bincount(
+            $trans,
+            $numSamples,
+            $batchSize,
+            $numClasses,
+            $labels->buffer(),$labels->offset(),
+            $output->buffer(),$output->offset()
+        );
+
+        $expected = [
+            [1,0,1,1],
+            [1,1,0,0],
+            [0,0,1,0],
+        ];
+        $this->assertEquals($expected,$output->toArray());
+        $this->assertEquals(
+            [
+                [0,-1,2,0],
+                [1, 1,0,3],
             ],
             $labels->toArray()
         );
