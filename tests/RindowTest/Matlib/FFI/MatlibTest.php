@@ -12430,6 +12430,7 @@ class MatlibTest extends TestCase
 
         // ===== trans: false ======
         $trans = false;
+        $addMode = false;
         $batchSize = 2;
         $numSamples = 4;
         $numClasses = 3;
@@ -12444,6 +12445,7 @@ class MatlibTest extends TestCase
             $batchSize,
             $numSamples,
             $numClasses,
+            $addMode,
             $labels->buffer(),$labels->offset(),
             $output->buffer(),$output->offset()
         );
@@ -12462,6 +12464,7 @@ class MatlibTest extends TestCase
 
         // ====== trans: true ======
         $trans = true;
+        $addMode = false;
         $batchSize = 4;
         $numSamples = 2;
         $numClasses = 3;
@@ -12476,6 +12479,7 @@ class MatlibTest extends TestCase
             $numSamples,
             $batchSize,
             $numClasses,
+            $addMode,
             $labels->buffer(),$labels->offset(),
             $output->buffer(),$output->offset()
         );
@@ -12496,6 +12500,83 @@ class MatlibTest extends TestCase
     }
 
     #[DataProvider('providerDtypesInt32Int64')]
+    public function testBincountAddMode($params)
+    {
+        extract($params);
+        $matlib = $this->getMatlib();
+
+        // ===== trans: false, addMode: true ======
+        $trans = false;
+        $addMode = true;
+        $batchSize = 2;
+        $numSamples = 4;
+        $numClasses = 3;
+        $labels = $this->array([
+            [0,1,2,0],
+            [1,1,0,2],
+        ],dtype:$dtype);
+        $this->assertEquals($labels->shape(),[$batchSize,$numSamples]);
+        $output = $this->ones([$batchSize,$numClasses],dtype:$dtype);
+        $matlib->bincount(
+            $trans,
+            $batchSize,
+            $numSamples,
+            $numClasses,
+            $addMode,
+            $labels->buffer(),$labels->offset(),
+            $output->buffer(),$output->offset()
+        );
+        $expected = [
+            [3,2,2],
+            [2,3,2],
+        ];
+        $this->assertEquals($expected,$output->toArray());
+        $this->assertEquals(
+            [
+                [0,1,2,0],
+                [1,1,0,2],
+            ],
+            $labels->toArray()
+        );
+
+        // ====== trans: true, addMode: true ======
+        $trans = true;
+        $addMode = true;
+        $batchSize = 4;
+        $numSamples = 2;
+        $numClasses = 3;
+        $labels = $this->array([
+            [0,1,2,0],
+            [1,1,0,2],
+        ],dtype:$dtype);
+        $this->assertEquals($labels->shape(),[$numSamples,$batchSize]);
+        $output = $this->ones([$numClasses,$batchSize],dtype:$dtype);
+        $matlib->bincount(
+            $trans,
+            $numSamples,
+            $batchSize,
+            $numClasses,
+            $addMode,
+            $labels->buffer(),$labels->offset(),
+            $output->buffer(),$output->offset()
+        );
+
+        $expected = [
+            [2,1,2,2],
+            [2,3,1,1],
+            [1,1,2,2],
+        ];
+        $this->assertEquals($expected,$output->toArray());
+        $this->assertEquals(
+            [
+                [0,1,2,0],
+                [1,1,0,2],
+            ],
+            $labels->toArray()
+        );
+    }
+
+    #[DataProvider('providerDtypesInt32Int64')]
     public function testBincountClassOverflow($params)
     {
         extract($params);
@@ -12503,6 +12584,7 @@ class MatlibTest extends TestCase
 
         // ===== trans: false ======
         $trans = false;
+        $addMode = false;
         $batchSize = 2;
         $numSamples = 4;
         $numClasses = 3;
@@ -12517,6 +12599,7 @@ class MatlibTest extends TestCase
             $batchSize,
             $numSamples,
             $numClasses,
+            $addMode,
             $labels->buffer(),$labels->offset(),
             $output->buffer(),$output->offset()
         );
@@ -12535,6 +12618,7 @@ class MatlibTest extends TestCase
 
         // ====== trans: true ======
         $trans = true;
+        $addMode = false;
         $batchSize = 4;
         $numSamples = 2;
         $numClasses = 3;
@@ -12549,6 +12633,7 @@ class MatlibTest extends TestCase
             $numSamples,
             $batchSize,
             $numClasses,
+            $addMode,
             $labels->buffer(),$labels->offset(),
             $output->buffer(),$output->offset()
         );

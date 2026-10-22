@@ -16,6 +16,8 @@ class Matlib
 
     const NO_TRANS = 111;
     const TRANS = 112;
+    const ADD = 1;
+    const NO_ADD = 0;
     const CONJ_TRANSTrans = 113;
     const CONJ_NO_TRANSNoTrans = 114;
 
@@ -3314,6 +3316,7 @@ class Matlib
         int $m,
         int $n,
         int $numClass,
+        bool $addMode,
         Buffer $A, int $offsetA,  // label data  (2D)
         Buffer $B, int $offsetB   // count label data (2D)
         ) : void
@@ -3334,6 +3337,11 @@ class Matlib
             $rows = $m;
             $cols = $n;
         }
+        if($addMode) {
+            $addModeCode = self::ADD;
+        } else {
+            $addModeCode = self::NO_ADD;
+        }
         $this->assert_shape_parameter("numClass", $numClass);
         // Check Buffer A
         $this->assert_matrix_buffer_spec("A", $A,$rows,$cols,$offsetA,$cols);
@@ -3351,13 +3359,13 @@ class Matlib
             case NDArray::int32: {
                 $pDataA = $A->addr($offsetA);
                 $pDataB = $B->addr($offsetB);
-                $this->ffi->rindow_matlib_i32_bincount($transCode, $m, $n, $numClass, $pDataA, $pDataB);
+                $this->ffi->rindow_matlib_i32_bincount($transCode, $m, $n, $numClass, $addModeCode, $pDataA, $pDataB);
                 break;
             }
             case NDArray::int64: {
                 $pDataA = $A->addr($offsetA);
                 $pDataB = $B->addr($offsetB);
-                $this->ffi->rindow_matlib_i64_bincount($transCode, $m, $n, $numClass, $pDataA, $pDataB);
+                $this->ffi->rindow_matlib_i64_bincount($transCode, $m, $n, $numClass, $addModeCode, $pDataA, $pDataB);
                 break;
             }
             default: {
