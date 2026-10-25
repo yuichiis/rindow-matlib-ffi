@@ -12126,6 +12126,41 @@ class MatlibTest extends TestCase
         ],$b->toArray());
     }
 
+    public static function providerCopyBuffer()
+    {
+        return [
+            'int8' => [[
+                'dtype' => NDArray::int8,
+            ]],
+            'int32' => [[
+                'dtype' => NDArray::int32,
+            ]],
+            'int64' => [[
+                'dtype' => NDArray::int64,
+            ]],
+        ];
+    }
+    #[DataProvider('providerCopyBuffer')]
+    public function testCopyBuffer($params)
+    {
+        extract($params);
+
+        $matlib = $this->getMatlib();
+
+        $x = $this->array([
+            [-1,2,-3],
+            [-4,5,-6]
+        ],dtype:$dtype);
+        $y = $this->array([[99,99,99],[99,99,99]],dtype:$dtype);
+        $matlib->copyBuffer(6, $x->buffer(), 0, $y->buffer(), 0);
+        $this->assertEquals($y->toArray(),$x->toArray());
+    
+        $y = $this->array([[99,99,99],[99,99,99]],dtype:$dtype);
+        $matlib->copyBuffer(3, $x->buffer(), 3, $y->buffer(), 3);
+        $this->assertEquals($x->toArray()[1],$y->toArray()[1]);
+        $this->assertEquals([99,99,99],$y->toArray()[0]);
+    }
+    
     #[DataProvider('providerDtypesFloats')]
     public function testreduceArgMaxSameSizeNormal($params)
     {

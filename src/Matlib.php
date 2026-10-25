@@ -194,6 +194,35 @@ class Matlib
         return $alignedSize;
     }
 
+    public function copyBuffer(
+        int $n,
+        Buffer $src, int $offsetSrc,
+        Buffer $dst, int $offsetDst,
+    ) : void
+    {
+        if($src->dtype()!=$dst->dtype()) {
+            throw new InvalidArgumentException("Unmatch data type R and X:".
+            $this->dtypeToString($src->dtype()).",".$this->dtypeToString($dst->dtype()));
+        }
+        if($n<1) {
+            throw new InvalidArgumentException("Copy size is less than 1");
+        }
+        if($offsetSrc<0) {
+            throw new InvalidArgumentException("OffsetSrc is less than 0");
+        }
+        if($offsetDst<0) {
+            throw new InvalidArgumentException("OffsetDst is less than 0");
+        }
+        $valueSize = $dst->value_size();
+        $pDataSrc = $src->addr($offsetSrc);
+        $pDataDst = $dst->addr($offsetDst);
+        FFI::memcpy(
+            $pDataDst,
+            $pDataSrc,
+            $n*$valueSize,
+        );        
+    }
+
     /**
      *     sum := sum(X)
      */
