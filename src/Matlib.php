@@ -213,7 +213,7 @@ class Matlib
         if($offsetDst<0) {
             throw new InvalidArgumentException("OffsetDst is less than 0");
         }
-        $valueSize = $dst->value_size();
+        $valueSize = $dst->valueSize();
         $pDataSrc = $src->addr($offsetSrc);
         $pDataDst = $dst->addr($offsetDst);
         FFI::memcpy(
