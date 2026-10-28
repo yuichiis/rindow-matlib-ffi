@@ -14,7 +14,7 @@ class MatlibFactory
     private static ?FFI $ffi = null;
     private static ?string $libFile = null;
 
-    protected string $lowestVersion = "1.1.0";
+    protected string $lowestVersion = "1.2.0";
     protected string $overVersion   = "2.0.0";
     protected ?string $currentVersion;
 

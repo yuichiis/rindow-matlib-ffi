@@ -37,6 +37,10 @@ class Matlib
     const P_THREAD     = 1; // Matlib is compiled using normal threading model
     const P_OPENMP     = 2; // Matlib is compiled using OpenMP threading model
 
+    protected const WHERE_MATRIX = 0;
+    protected const WHERE_VECTOR = 1;
+    protected const WHERE_SCALAR = 2;
+
     /** @var array<int,string> $dtypeToString */
     protected $dtypeToString = [
         NDArray::bool=>'bool',
