@@ -167,6 +167,10 @@ void rindow_matlib_s_range(int32_t n, float *x, int32_t incX, float start, float
 void rindow_matlib_i_range(int32_t dtype, int32_t n,void *x, int32_t incX, int64_t start, int64_t limit, int64_t delta);
 void rindow_matlib_s_linspace(int32_t n, float *x, int32_t incX, float start, float stop);
 void rindow_matlib_d_linspace(int32_t n, double *x, int32_t incX, double start, double stop);
+int32_t rindow_matlib_s_iamin(int32_t n,float *x, int32_t incX);
+int32_t rindow_matlib_d_iamin(int32_t n,double *x, int32_t incX);
+int32_t rindow_matlib_c_iamin(int32_t n,void *x, int32_t incX);
+int32_t rindow_matlib_z_iamin(int32_t n,void *x, int32_t incX);
 // ********************************************************
 // This function is unofficial.
 // It may be changed without notice.

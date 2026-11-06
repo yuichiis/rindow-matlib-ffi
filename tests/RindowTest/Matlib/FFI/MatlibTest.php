@@ -13434,4 +13434,58 @@ class MatlibTest extends TestCase
             ]),$this->toComplex($B->toArray()));
         }
     }
+
+    public function testIaminNormal()
+    {
+        $matlib = $this->getMatlib();
+
+        // float32
+        $X = $this->array([100,-10,1],dtype:NDArray::float32);
+        [$N,$XX,$offX,$incX] =
+            $this->translate_amin($X);
+
+        $min = $matlib->iamin($N,$XX,$offX,$incX);
+        $this->assertEquals(2,$min);
+
+        // float64
+        $X = $this->array([100,-10,1],dtype:NDArray::float64);
+        [$N,$XX,$offX,$incX] =
+            $this->translate_amin($X);
+
+        $min = $matlib->iamin($N,$XX,$offX,$incX);
+        $this->assertEquals(2,$min);
+
+        if(!$this->notSupportComplex()) {
+            // complex64
+            $X = $this->array([C(100),C(-10),C(1)],dtype:NDArray::complex64);
+            [$N,$XX,$offX,$incX] =
+                $this->translate_amin($X);
+
+            $min = $matlib->iamin($N,$XX,$offX,$incX);
+            $this->assertEquals(2,$min);
+
+            $X = $this->array([C(0,100),C(0,-10),C(0,1)],dtype:NDArray::complex64);
+            [$N,$XX,$offX,$incX] =
+                $this->translate_amin($X);
+
+            $min = $matlib->iamin($N,$XX,$offX,$incX);
+            $this->assertEquals(2,$min);
+
+            // complex128
+            $X = $this->array([C(100),C(-10),C(1)],dtype:NDArray::complex128);
+            [$N,$XX,$offX,$incX] =
+                $this->translate_amin($X);
+
+            $min = $matlib->iamin($N,$XX,$offX,$incX);
+            $this->assertEquals(2,$min);
+
+            $X = $this->array([C(0,100),C(0,-10),C(0,1)],dtype:NDArray::complex64);
+            [$N,$XX,$offX,$incX] =
+                $this->translate_amin($X);
+
+            $min = $matlib->iamin($N,$XX,$offX,$incX);
+            $this->assertEquals(2,$min);
+        }
+    }
+
 }

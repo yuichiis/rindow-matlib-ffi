@@ -4367,4 +4367,40 @@ class Matlib
         }
     }
 
+    public function iamin(
+        int $n,
+        Buffer $X, int $offsetX, int $incX,
+        ) : int
+    {
+        $ffi= $this->ffi;
+
+        $this->assert_shape_parameter("n", $n);
+
+        // Check Buffer X
+        $this->assert_vector_buffer_spec("X", $X, $n, $offsetX, $incX);
+
+        switch($X->dtype()) {
+            case NDArray::float32:{
+                $result = $ffi->rindow_matlib_s_iamin($n,$X->addr($offsetX),$incX);
+                break;
+            }
+            case NDArray::float64:{
+                $result = $ffi->rindow_matlib_d_iamin($n,$X->addr($offsetX),$incX);
+                break;
+            }
+            case NDArray::complex64:{
+                $result = $ffi->rindow_matlib_c_iamin($n,$X->addr($offsetX),$incX);
+                break;
+            }
+            case NDArray::complex128:{
+                $result = $ffi->rindow_matlib_z_iamin($n,$X->addr($offsetX),$incX);
+                break;
+            }
+            default: {
+                throw new InvalidArgumentException('Unsuppored data type');
+            }
+        }
+        return $result;
+    }
+
 }
