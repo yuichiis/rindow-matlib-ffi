@@ -206,7 +206,7 @@ class Matlib
     {
         if($src->dtype()!=$dst->dtype()) {
             throw new InvalidArgumentException("Unmatch data type R and X:".
-            $this->dtypeToString($src->dtype()).",".$this->dtypeToString($dst->dtype()));
+            $this->dtypeToString[$src->dtype()].",".$this->dtypeToString[$dst->dtype()]);
         }
         if($n<1) {
             throw new InvalidArgumentException("Copy size is less than 1");
@@ -3355,7 +3355,7 @@ class Matlib
         ) : void
     {
         if($this->profiling) {
-            $profilingName = sprintf("bincount(trans=%s,m=%d,n=%d,numClasses=%d)",($trans ? 'T' : 'N'),$m,$n,$numClasses);
+            $profilingName = sprintf("bincount(trans=%s,m=%d,n=%d,numClasses=%d)",($trans ? 'T' : 'N'),$m,$n,$numClass);
             $this->profilingStart($profilingName);
         }
         $this->assert_shape_parameter("m", $m);

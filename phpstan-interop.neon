@@ -4,12 +4,12 @@ parameters:
 			message: "#^Call to an undefined method Interop\\\\Polite\\\\Math\\\\Matrix\\\\.*[Device\\|Linear]*Buffer\\:\\:dtype\\(\\)#"
 		-
 			message: "#^Call to an undefined method Interop\\\\Polite\\\\Math\\\\Matrix\\\\.*[Device\\|Linear]*Buffer\\:\\:addr\\(\\)#"
+		-
+			message: "#^Call to an undefined method Interop\\\\Polite\\\\Math\\\\Matrix\\\\.*[Device\\|Linear]*Buffer\\:\\:valueSize\\(\\)#"
 
 
 #		-
 #			message: "#^Call to an undefined method Interop\\\\Polite\\\\Math\\\\Matrix\\\\.*[Device\\|Linear]*Buffer\\:\\:dump\\(\\)#"
-#		-
-#			message: "#^Call to an undefined method Interop\\\\Polite\\\\Math\\\\Matrix\\\\.*[Device\\|Linear]*Buffer\\:\\:valueSize\\(\\)#"
 #		-
 #			message: "#function count expects array|Countable, Interop\\\\Polite\\\\Math\\\\Matrix\\\\NDArray given#"
 #		-
